@@ -1,112 +1,121 @@
 # Berechnung
 
 > Automatisch erzeugt aus `params.toml` mit `python3 tools/build.py`. Nicht von Hand ändern.
-> Überschlagsrechnung zur Plausibilisierung, kein Statik-Nachweis.
+> Überschlagsrechnung zur Abstimmung. Den Nachweis von Lasten, Verbindungen, Verriegelung und Kippsicherheit übernehmen Metallbau bzw. Beschlaglieferant.
 
 ## Hauptmaße
 
-- Außen: 1400 × 430 × 450 mm (L × T × H), Ecken im Grundriss R 70
-- Polster 358 mm breit in einer Wanne mit 20 mm Rand: Rückenlehne 893 mm, Fuge 35 mm, Sitz 400 mm
-- Rolltür 1.260 mm lang aus 65 Lamellen à 17,9 mm. Offen läuft sie in die Tasche links (110 mm) und hinter den Fächern entlang (Speicherweg 1.502 mm ✅)
-- Fächer: 440, 440, 308 mm breit, 360 mm tief
+- Außen: 1200 × 430 × 450 mm (L × T × H), Ecken im Grundriss R 70
+- Längskette: 22 + Lehne 810 + Fuge 16 + Sitz 330 + 22 = 1200 mm
+- Polsterbreite 368 mm (Rand 19 + Spalt 12 je Seite für die Gelenkkonsolen)
+- Höhe: Sockel 70 + Korpus 310 + Polsterpaket 70 = 450 mm
+- Rolltür 1.060 mm aus 54 Lamellen à 18,2 mm, Speicherweg links und hinten 1.331 mm ✅
+- Innenraum: Tasche 100 mm, Hantelbereich 660 mm, Zubehör 378 mm, 369 mm tief, 247 mm hoch
 
 ## Rückenlehne
 
-Drehachse an der inneren Kante, 25 mm unter der Polsteroberfläche (x = 929 mm ab linkem Ende). Das linke Ende hebt sich. Die Stütze ist 390 mm von der Achse angelenkt und 480 mm lang.
+Gemeinsame Drehachse mit dem anderen Polster in der Mitte der Fuge, 12 mm unter der Polsteroberfläche (x = 840 mm ab linkem Ende). Das linke Ende hebt sich. Die Gleitstütze ist 390 mm von der Achse angelenkt und 390 mm lang. Ihr Fuß gleitet in einer C-Schiene und wird in jeder Arbeitsstellung von einem federnden Indexbolzen Ø 10 formschlüssig verriegelt. Flach liegt das Polster auf dem Rahmen, der Gleitschuh steht am Endanschlag und wird von einem Kugelschnäpper gegen Abheben gehalten.
 
 Last: 70 % von 120 kg × 1.5 = 1.236 N, 350 mm von der Achse, senkrecht nach unten oder senkrecht auf das Polster. Die Tabelle zeigt den ungünstigeren Fall.
 
-| Stellung | Rast ab Achse | Rast ab linkem Ende | Stützkraft | Achskraft | Neigung Stütze |
+| Stellung | Loch / Anschlag ab Achse | ab linkem Ende | Stützkraft | Achskraft | Neigung Stütze |
 |---|---:|---:|---:|---:|---:|
-| 0° flach (Parkrast, 12 mm tief) | 870 mm | 59 mm | – | – | 0° |
-| 25° | 825 mm | 104 mm | 1.788 N | 1.627 N | 20° |
-| 35° | 770 mm | 159 mm | 1.323 N | 1.173 N | 28° |
-| 45° | 696 mm | 233 mm | 1.143 N | 993 N | 37° |
-| 60° | 557 mm | 372 mm | 1.122 N | 929 N | 48° |
-| 75° | 399 mm | 530 mm | 1.365 N | 1.024 N | 58° |
-| 85° | 298 mm | 631 mm | 1.759 N | 1.531 N | 63° |
+| 0° | 780 mm | 60 mm | – | – | 2° |
+| 15° | 766 mm | 74 mm | 2.801 N | 2.596 N | 17° |
+| 30° | 694 mm | 146 mm | 1.346 N | 1.125 N | 34° |
+| 45° | 561 mm | 279 mm | 1.096 N | 793 N | 52° |
+| 60° | 325 mm | 515 mm | 1.421 N | 1.113 N | 79° |
 
-- Kleinster Abstand zwischen zwei Rasten 45 mm (Minimum 30 mm).
-- Knicken der Stütze (2 × Flachstahl 25 × 8): Knicklast 19,2 kN bei max. 1,79 kN → Sicherheit ≈ 10,7.
-- Achskraft auf zwei Bolzen M10: Scherspannung ≈ 10 N/mm² (zulässig > 100 N/mm²).
+- Kleinster Lochabstand 71 mm (Minimum 22 mm). Ein eigenes Loch für flach ginge nicht: Es läge nur gut 10 mm neben dem Loch für den kleinsten Winkel.
+- Knicken der Stütze (2 × Flachstahl 25 × 8): Knicklast 29,1 kN bei max. 2,80 kN → Sicherheit ≈ 10,4.
+- Indexbolzen Ø 10, je Bein zweischnittig: Scherspannung ≈ 9 N/mm² (Stahl zulässig > 100 N/mm²).
 
-✅ Alle Rasten liegen auf der Leiste und haben genug Abstand.
-
-Bei steilen Stellungen zieht die Achse nach oben. Die Gelenkplatten werden deshalb mit durchgehenden Schrauben auf eine Stahl-Gegenplatte unter dem Deckel geschraubt.
+✅ Alle Löcher liegen auf der Schiene und haben genug Abstand.
 
 ## Sitz
 
-Drehachse an der inneren Kante (x = 964 mm ab linkem Ende), 25 mm unter der Polsteroberfläche. Das rechte Ende hebt sich, damit man auf der Schrägbank nicht nach vorn rutscht. Getragen wird der Sitz von Klappbügeln aus Stahl, einer je Stellung, ineinander geschachtelt. Der benutzte Bügel wird hochgeklappt und steht senkrecht, die anderen liegen flach in der Wanne.
+Gemeinsame Drehachse mit dem anderen Polster in der Mitte der Fuge, 12 mm unter der Polsteroberfläche (x = 840 mm ab linkem Ende). Das rechte Ende hebt sich. Die Gleitstütze ist 230 mm von der Achse angelenkt und 80 mm lang. Ihr Fuß gleitet in einer C-Schiene und wird in jeder Arbeitsstellung von einem federnden Indexbolzen Ø 10 formschlüssig verriegelt. Flach liegt das Polster auf dem Rahmen, der Gleitschuh steht am Endanschlag und wird von einem Kugelschnäpper gegen Abheben gehalten.
 
-Last: 100 % von 120 kg × 1.5 = 1.766 N, 150 mm von der Achse, senkrecht auf das Polster.
+Last: 100 % von 120 kg × 1.5 = 1.766 N, 150 mm von der Achse, senkrecht nach unten oder senkrecht auf das Polster. Die Tabelle zeigt den ungünstigeren Fall.
 
-| Stellung | Bügel ab Achse | Bügelhöhe über Deckel | Kraft auf den Bügel | Achskraft |
-|---|---:|---:|---:|---:|
-| 0° flach | – | alle Bügel liegen flach | – | – |
-| 10° | 340 mm | 79 mm | 779 N | 987 N |
-| 20° | 315 mm | 132 mm | 841 N | 925 N |
+| Stellung | Loch / Anschlag ab Achse | ab linkem Ende | Stützkraft | Achskraft | Neigung Stütze |
+|---|---:|---:|---:|---:|---:|
+| 0° | 309 mm | 1.149 mm | – | – | 9° |
+| 10° | 297 mm | 1.137 mm | 1.851 N | 1.439 N | 42° |
+| 15° | 267 mm | 1.107 mm | 1.192 N | 819 N | 69° |
 
-✅ Die Bügel passen umgeklappt unter den Sitz.
+- Kleinster Lochabstand 29 mm (Minimum 22 mm). Ein eigenes Loch für flach ginge nicht: Es läge nur gut 10 mm neben dem Loch für den kleinsten Winkel.
+- Knicken der Stütze (2 × Flachstahl 25 × 8): Knicklast 690,9 kN bei max. 1,85 kN → Sicherheit ≈ 373,2.
+- Indexbolzen Ø 10, je Bein zweischnittig: Scherspannung ≈ 6 N/mm² (Stahl zulässig > 100 N/mm²).
 
-## Stauraum-Belegung
+✅ Alle Löcher liegen auf der Schiene und haben genug Abstand.
 
-Schwerste Teile zuerst, untere Ebene zuerst. Die Hanteln liegen auf einer schwarzen Ablage.
+## Fuge zwischen Lehne und Sitz
 
-| Zelle | Inhalt | Breite | Höhe | Tiefe | kg |
+Lehne und Sitz drehen um eine gemeinsame Achse in der Fugenmitte, 12 mm unter der Oberfläche. Die Polsterkanten sind mit R 12 gerundet und wandern beim Anstellen nur wenig in die Fuge. Kleinster Abstand über alle Stellungen: **5,3 mm** (Lehne 60°, Sitz 15°, Fuge 16 mm). ✅
+
+Mit einer Achse unten am Polster, wie in der Funktionsskizze des Vorentwurfs angedeutet, würden die oberen Kanten bei 60° rund 61 mm in die Fuge wandern. Deshalb sitzt die Achse oben, getragen von schmalen Konsolen im Spalt neben den Polstern. Zwei getrennte Achsen gingen bei so kleiner Fuge nicht: Zwei Bolzen M10 brauchen mehr als 16 mm Abstand.
+
+## Stauraum
+
+Hanteln einzeln in Aufnahmen auf Stahltraversen zwischen den Rahmenstützen, schwerste unten. Zubehör im Zubehörbereich; was in der Tiefe an die Stützen reicht, liegt daneben (die Matte quer).
+
+| Bereich | Inhalt | Breite | Höhe | Tiefe | kg |
 |---|---|---:|---:|---:|---:|
-| Fach 1 unten | Kurzhanteln 10,0 kg (Paar) | 215 | 106 | 286 | 20,0 |
-| Fach 1 unten | Kurzhanteln 5,0 kg (Paar) | 175 | 86 | 249 | 10,0 |
-| Fach 1 oben | Gewichtsmanschetten/Knuckles (3 Paar) | 160 | 70 | 220 | 4,9 |
-| Fach 1 oben | Widerstandsbänder (3 Stück) | 160 | 60 | 250 | 0,6 |
-| Fach 2 unten | Kurzhanteln 7,5 kg (Paar) | 195 | 96 | 273 | 15,0 |
-| Fach 2 unten | Kurzhanteln 3,5 kg (Paar) | 155 | 76 | 236 | 7,0 |
-| Fach 2 oben | Trainingsmatte (gefaltet) | 340 | 60 | 300 | 1,5 |
-| Fach 3 unten | Kurzhanteln 2,5 kg (Paar) | 155 | 76 | 202 | 5,0 |
+| Hantelbereich unten | Kurzhantel 10,0 kg (1) | 110 | 112 | 286 | 10,0 |
+| Hantelbereich unten | Kurzhantel 10,0 kg (2) | 110 | 112 | 286 | 10,0 |
+| Hantelbereich unten | Kurzhantel 7,5 kg (1) | 100 | 102 | 273 | 7,5 |
+| Hantelbereich unten | Kurzhantel 7,5 kg (2) | 100 | 102 | 273 | 7,5 |
+| Hantelbereich unten | Kurzhantel 5,0 kg (1) | 90 | 92 | 249 | 5,0 |
+| Hantelbereich oben | Kurzhantel 5,0 kg (2) | 90 | 92 | 249 | 5,0 |
+| Hantelbereich oben | Kurzhantel 3,5 kg (1) | 80 | 82 | 236 | 3,5 |
+| Hantelbereich oben | Kurzhantel 3,5 kg (2) | 80 | 82 | 236 | 3,5 |
+| Hantelbereich oben | Kurzhantel 2,5 kg (1) | 80 | 82 | 202 | 2,5 |
+| Hantelbereich oben | Kurzhantel 2,5 kg (2) | 80 | 82 | 202 | 2,5 |
+| Zubehör unten | Gewichtsmanschetten/Knuckles (3 Paar) | 160 | 70 | 220 | 4,9 |
+| Zubehör unten | Widerstandsbänder (3 Stück) | 160 | 60 | 250 | 0,6 |
+| Zubehör oben | Trainingsmatte (gefaltet) | 300 | 60 | 340 | 1,5 |
 
-| Zelle | lichte Höhe | belegt / verfügbar (Breite) | davon vorn offen |
+| Bereich | lichte Höhe | belegt / verfügbar (Breite) | davon vorn offen |
 |---|---:|---:|---:|
-| Fach 1 unten | 130 mm | 435 / 440 mm | 440 mm |
-| Fach 1 oben | 121 mm | 365 / 440 mm | 440 mm |
-| Fach 2 unten | 130 mm | 395 / 440 mm | 440 mm |
-| Fach 2 oben | 121 mm | 370 / 440 mm | 440 mm |
-| Fach 3 unten | 130 mm | 185 / 308 mm | 262 mm |
-| Fach 3 oben | 121 mm | 15 / 308 mm | 262 mm |
+| Hantelbereich unten | 128 mm | 602 / 660 mm | 660 mm |
+| Hantelbereich oben | 107 mm | 502 / 660 mm | 660 mm |
+| Zubehör unten | 128 mm | 350 / 378 mm | 327 mm |
+| Zubehör oben | 107 mm | 320 / 378 mm | 327 mm |
 
-✅ Alles Inventar findet Platz.
+✅ Alle 10 Hanteln und das Zubehör finden Platz.
+
+Die Breiten gelten für die selbstgebauten Hanteln aus [hanteln.md](hanteln.md). Vor der Fertigung werden die fertigen Hanteln vermessen und die Aufnahmen danach gesetzt.
 
 ## Durchbiegung
 
-Lastannahme: 120 kg Nutzer × Stoßfaktor 1.5.
+Lastannahme: 120 kg Nutzer × Stoßfaktor 1.5. Die Lasten laufen über den Innenrahmen direkt in die Füße, die Holzverkleidung trägt nicht mit.
 
 | Bauteil | Last | Stützweite | Durchbiegung | Grenze L/300 | |
 |---|---:|---:|---:|---:|---|
-| Vorderkante: Frontleiste mit Rand + Deckel + Rastleiste (50 % der Last) | 883 N | 458 mm | 0,42 mm | 1,53 mm | ✅ |
-| Lehnenplatte flach zwischen den Rastleisten (Streifen 300 mm) | 1.766 N | 278 mm | 0,48 mm | 0,93 mm | ✅ |
-| Rückenlehne schräg, Überstand hinter der Stütze (25°) | 631 N | 503 mm | 1,45 mm | 1,68 mm | ✅ |
-| Sitz schräg, Überstand hinter der Stütze (10°) | 261 N | 60 mm | 0,01 mm | 0,20 mm | ✅ |
-| Fachboden Fach 1 (5,5 kg × 2) | 108 N | 440 mm | 0,10 mm | 1,47 mm | ✅ |
-| Fachboden Fach 2 (1,5 kg × 2) | 29 N | 440 mm | 0,03 mm | 1,47 mm | ✅ |
-| Fachboden Fach 3 (0,0 kg × 2) | 0 N | 308 mm | 0,00 mm | 1,03 mm | ✅ |
-
-Die verleimte Rückwand trägt die Hinterkante des Deckels zusätzlich mit. Sie ist hier nicht angesetzt.
+| Längsrohr 50 × 25 × 3 (50 % der Last) | 883 N | 626 mm | 0,54 mm | 2,09 mm | ✅ |
+| Polsterplatte zwischen den Längsrohren (Streifen 300 mm) | 1.766 N | 286 mm | 0,53 mm | 0,95 mm | ✅ |
+| Rückenlehne angestellt, Überstand hinter der Stütze | 631 N | 428 mm | 0,89 mm | 1,43 mm | ✅ |
+| Sitz angestellt, Überstand hinter der Stütze | 569 N | 108 mm | 0,07 mm | 0,36 mm | ✅ |
+| Hantel-Traverse obere Ebene (17,0 kg × 2, je Traverse) | 167 N | 660 mm | 0,17 mm | 2,20 mm | ✅ |
 
 ## Kippsicherheit
 
-Die Bank steht auf 4 Füßen, deren Außenkante 40 mm hinter der Korpuskante liegt. Das Polster beginnt 36 mm hinter der Kante.
+Die Füße sitzen unter den Eckstützen des Innenrahmens. Standfläche x = 128…1.183 mm, y = 42…388 mm.
 
-| Fall | leer | mit Inventar |
+| Fall | leer | mit Hanteln |
 |---|---:|---:|
-| Senkrechte Last auf der Längskante, ab der die Bank kippt | > 1.000 kg (kippt praktisch nicht) | > 1.000 kg (kippt praktisch nicht) |
-| Senkrechte Last auf der Stirnkante, ab der die Bank kippt | > 1.000 kg (kippt praktisch nicht) | > 1.000 kg (kippt praktisch nicht) |
-| Lehne 85°: waagerechter Druck nach hinten an der Lehnenoberkante (1.315 mm hoch), niemand sitzt | 320 N | 635 N |
+| Senkrechte Last an der Längskante | liegt innerhalb der Standfläche | kippt nicht |
+| Senkrechte Last am linken Lehnenende, ab der die Bank kippt | 314 kg | 599 kg |
+| Senkrechte Last am rechten Sitzende | liegt innerhalb der Standfläche | kippt nicht |
+| Lehne 60°: waagerechter Druck nach hinten an der Lehnenoberkante (1.139 mm hoch), niemand sitzt | 287 N | 547 N |
 
-Sitzt jemand auf dem Sitz, steigt der letzte Wert (leere Bank) auf ≈ 1.326 N. Beim Training ist das unkritisch. Die aufgestellte Lehne ist aber kein Griff zum Hochziehen, wenn die Bank leer ist.
+Zum Vergleich: 120 kg × 1.5 = 180 kg. Step-ups oder Aufstützen genau am Lehnenende sind damit abgedeckt; die Lehne ist aber kein Griff zum Hochziehen.
 
-## Absenkrollen: vom Bett abrücken
+## Fahrwerk
 
-- 4 lenkbare Doppelrollen Ø 40 mm sitzen verdeckt im Sockel. Eine Exzenterwelle hebt sie gemeinsam.
-- Bronze-Fußhebel vorn rechts nach unten treten: Die Rollen fahren 6 mm unter die Füße, und die Bank rollt in jede Richtung.
-  Hebel mit der Fußspitze hochziehen: Die Bank steht wieder fest auf den Füßen. Der Hebel rastet in beiden Lagen über den Totpunkt.
-- Fußkraft am Hebel (≈ 50 mm Weg, mit Reibung): leer ≈ 10 kg, mit Inventar ≈ 20 kg.
-- Zum Training die Bank ca. 60 cm vom Bett wegrollen: Beim Drücken und bei Fliegenden gehen die Ellbogen unter Polsterhöhe, und auf der Schrägbank steht ein Fuß neben der Bank. Vor dem Training die Rollen hochstellen.
-- Die Rollen sind für glatte Böden (Parkett, Fliesen) gedacht.
+- Trainieren: Die Bank steht auf 4 Stellfüßen an den Eckstützen. Die 4 Lenkrollen Ø 50 haben Bodenfreiheit.
+- Rollen: Bronze-Pedal rechts im Sockel treten. Zwei gekoppelte Exzenterwellen senken den geführten Rollenrahmen ab und heben die Füße 8 mm an.
+- Pedalkraft (≈ 50 mm Weg, mit Reibung): leer ≈ 15 kg, mit Hanteln ≈ 28 kg.
+- Transportstellung über Totpunkt verriegelt. Beim Verschieben: Polster flach, Rolltür zu, niemand auf der Bank.
+- Option: elektrischer Taster mit Spindelantrieb statt Pedal.

@@ -2,8 +2,8 @@
 """Erzeugt aus params.toml alle abgeleiteten Dateien der Bank.
 
 - cad/params.scad       Parameter + abgeleitete Maße für das OpenSCAD-Modell
-- docs/stueckliste.md   Zuschnittliste, Metallteile, Beschläge, Gewicht, grobe Kosten
-- docs/berechnung.md    Rasten von Lehne und Sitz, Stauraum, Durchbiegung, Kippsicherheit, Rollen
+- docs/stueckliste.md   Planungsstückliste nach Gewerken, Gewicht, grobe Kosten
+- docs/berechnung.md    Gleitstützen von Lehne und Sitz, Polsterfuge, Stauraum, Rahmen, Kippsicherheit, Fahrwerk
 - docs/hanteln.md       Selbstbau-Hanteln: Maße je Gewicht, Fertigung, Kosten
 - docs/zeichnungen/     Maßskizzen als SVG
 - renders/*.png         Ansichten (nur wenn OpenSCAD installiert ist)
@@ -22,7 +22,6 @@ import zeichnungen
 
 ROOT = Path(__file__).resolve().parent.parent
 G = 9.81
-E_STAHL = 210000
 TEILE = ("lehne", "sitz")
 NAME = {"lehne": "Rückenlehne", "sitz": "Sitz"}
 
@@ -43,13 +42,13 @@ def rr_umfang(l, b, r):
 
 def derive(p):
     """Alle abgeleiteten Maße an einer Stelle – SCAD, Doku und Zeichnungen nutzen dieselben Werte."""
-    b, m, po, me, k, rt = (p["bank"], p["material"], p["polster"], p["mechanik"],
-                           p["korpus"], p["rolltuer"])
+    b, m, po, me, k, rt, ra = (p["bank"], p["material"], p["polster"], p["mechanik"],
+                               p["korpus"], p["rolltuer"], p["rahmen"])
     L, D, H, R = b["laenge"], b["tiefe"], b["hoehe"], b["eckradius"]
     t, ti = m["aussen"], m["innen"]
     d = {"L": L, "D": D, "H": H, "R": R, "t": t, "ti": ti}
 
-    # Höhenaufbau: Polster → Rand (Wanne) → Deckel → Fächer → Boden → Sockel
+    # Höhenaufbau: Polster → Wanne (Rand) → Wannenboden → Innenraum → Boden → Sockel
     P = po["platte"] + po["schaum"]
     d["polster_h"] = P
     d["polster_z0"] = H - P
@@ -63,16 +62,16 @@ def derive(p):
     d["innen_h"] = d["deckel_z0"] - d["boden_z1"]
 
     # Polster in der Wanne: Lehne links, Fuge, Sitz rechts
-    e = t + po["luft"]
-    d["pad_y0"], d["pad_b"] = e, D - 2 * e
-    d["pad_r_aussen"] = max(po["radius"], R - e)          # konzentrisch zur Korpusecke
-    d["lehne_x0"] = e
-    d["sitz_x1"] = L - e
+    d["pad_y0"] = t + po["luft_seite"]
+    d["pad_b"] = D - 2 * d["pad_y0"]
+    d["pad_r_aussen"] = max(po["radius"], R - t - po["luft_seite"])
+    d["lehne_x0"] = t + po["luft_ende"]
+    d["sitz_x1"] = L - d["lehne_x0"]
     d["sitz_x0"] = d["sitz_x1"] - po["sitz_laenge"]
     d["lehne_x1"] = d["sitz_x0"] - po["fuge"]
     d["lehne_l"] = d["lehne_x1"] - d["lehne_x0"]
 
-    # Rolltür vorn zwischen den Eckrundungen; offen läuft sie in die Tasche links und an der Rückseite entlang
+    # Rolltür vorn zwischen den Eckrundungen; offen in der Tasche links und hinter dem Nutzraum
     d["rt_x0"], d["rt_x1"] = R, L - R
     d["rt_len"] = d["rt_x1"] - d["rt_x0"]
     d["rt_y0"] = rt["luft"]
@@ -80,78 +79,79 @@ def derive(p):
     d["rt_n"] = n
     d["rt_b"] = (d["rt_len"] - (n - 1) * rt["lamelle_fuge"]) / n
     d["rt_lamelle_l"] = d["innen_h"] + 2 * rt["nut"] - 2
-    d["fach_y0"] = t + 2
+    d["fach_y0"] = t + 3
     d["rt_hinten_y0"] = D - t - rt["luft"] - rt["lamelle_dicke"]
     d["fach_y1"] = d["rt_hinten_y0"] - 3
     d["fach_tiefe"] = d["fach_y1"] - d["fach_y0"]
     d["rt_speicher"] = d["fach_tiefe"] + (d["innen_l"] - k["tasche"]) - 2 * rt["biegeradius"]
 
-    # Tasche, Trennwände, Fächer
+    # Tasche, Hantelbereich, Zubehörbereich
     d["tasche_x0"], d["tasche_x1"] = t, t + k["tasche"]
     breiten = list(k["faecher"])
     rest = d["innen_l"] - k["tasche"] - ti - sum(breiten) - len(breiten) * ti
     breiten.append(rest)
     d["fach_breiten"] = breiten
     x = d["tasche_x1"]
-    d["mw_x"] = []
-    d["fach_x0"] = []
-    for i, bb in enumerate(breiten):
+    d["mw_x"], d["fach_x0"] = [], []
+    for bb in breiten:
         d["mw_x"].append(x)
         x += ti
         d["fach_x0"].append(x)
         x += bb
     d["n_fach"] = len(breiten)
     d["n_mw"] = len(d["mw_x"])
-    if k["fachboden"]:
-        d["fachboden_z0"] = d["boden_z1"] + k["fach_unten"]
-        d["fachboden_z1"] = d["fachboden_z0"] + ti
-    else:
-        d["fachboden_z0"] = d["fachboden_z1"] = None
+    d["ebene_z0"] = d["boden_z1"] + k["fach_unten"]          # Traverse bzw. Fachboden der oberen Ebene
+    d["ebene_z1"] = d["ebene_z0"] + ti
     zellen = []
     for i, (x0, bb) in enumerate(zip(d["fach_x0"], breiten)):
-        ebenen = ([("unten", d["boden_z1"], d["fachboden_z0"]), ("oben", d["fachboden_z1"], d["deckel_z0"])]
-                  if k["fachboden"] else [("", d["boden_z1"], d["deckel_z0"])])
-        # Zugang nur, soweit das Fach vor der Rolltüröffnung liegt
         offen = min(x0 + bb, d["rt_x1"]) - max(x0, d["rt_x0"])
-        for ebene, z0, z1 in ebenen:
-            zellen.append({"name": f"Fach {i + 1} {ebene}".strip(), "fach": i, "ebene": ebene,
+        for ebene, z0, z1 in (("unten", d["boden_z1"], d["ebene_z0"]), ("oben", d["ebene_z1"], d["deckel_z0"])):
+            zellen.append({"name": f"{'Hantelbereich' if i == 0 else 'Zubehör'} {ebene}", "fach": i, "ebene": ebene,
                            "x0": x0, "z0": z0, "h": z1 - z0, "zugang": z1 - z0,
                            "breite": bb, "offen": offen, "tiefe": d["fach_tiefe"]})
     zellen.sort(key=lambda z: (z["ebene"] == "oben", z["fach"]))
     d["zellen"] = zellen
 
-    # Sockel: Eichenzarge, Füße, Absenkrollen, Fußhebel
-    se, fe = k["sockel_einzug"], k["fuss_einzug"]
-    d["fuss_pos"] = [[fe, fe], [L - fe, fe], [fe, D - fe], [L - fe, D - fe]]
-    rx = fe + 90
-    d["rollen_pos"] = [[rx, fe], [L - rx, fe], [rx, D - fe], [L - rx, D - fe]]
-    d["pedal_x"] = L - 170
+    # Innenrahmen: Längsrohre in der Wanne, Stützen bis zu den Füßen, Traversen für die Hanteln
+    st = ra["stuetze"]
+    d["rohr_y0"] = [t + 3, D - t - 3 - ra["rohr_b"]]
+    d["stuetze_x"] = [d["mw_x"][0] + ti + 2, d["mw_x"][1] - st - 2, L - t - 3 - st]
+    # Stützen innerhalb der Sockelzarge (sonst sähe man sie im Sockelrücksprung)
+    zarge_innen = k["sockel_einzug"] + 20
+    d["stuetze_y"] = [zarge_innen + 2, D - zarge_innen - 2 - st]
+    d["fuss_pos"] = [[x + st / 2, y + st / 2] for y in d["stuetze_y"] for x in (d["stuetze_x"][0], d["stuetze_x"][-1])]
+    d["traverse_y"] = None                                    # nach den Hanteln gesetzt (pack)
+
+    # Fahrwerk
+    d["rollen_pos"] = [[x + st / 2 + (60 if i == 0 else -60), y]
+                       for y in (d["stuetze_y"][0] + st + 40, d["stuetze_y"][1] - 40)
+                       for i, x in enumerate((d["stuetze_x"][0], d["stuetze_x"][-1]))]
+    d["pedal_x"] = L - 150
 
     # Mechanik: gemeinsame Werte
-    d["achse_z"] = H - me["achse_unter_oberkante"]
-    d["vA"] = -(P - me["achse_unter_oberkante"]) - me["stuetze_versatz"]
-    rr = me["buegel_d"] / 2
-    d["rast_z"] = d["polster_z0"] - me["rast_tiefe"] + rr - d["achse_z"]
-    d["park_tiefe"] = d["polster_z0"] - (d["achse_z"] + d["vA"]) + rr
-    lb, le = me["leiste_breite"], me["leiste_einzug"]
-    d["leiste_y0"] = [e + le, D - e - le - lb]
-    d["bein_y0"] = [d["leiste_y0"][0] + lb + 2, d["leiste_y0"][1] - 2 - me["bein_breite"]]
-    d["stab_y0"] = d["leiste_y0"][0] + 5
-    d["stab_l"] = d["leiste_y0"][1] + lb - 5 - d["stab_y0"]
+    e = me["achse_unter_oberkante"]
+    d["achse_z"] = H - e
+    d["vA"] = -(P - e) - me["stuetze_versatz"]
+    d["schiene_z"] = d["deckel_z1"] + me["schiene_h"] / 2 - d["achse_z"]   # Bolzenmitte relativ zur Achse
+    d["bein_y0"] = [d["rohr_y0"][0] + ra["rohr_b"] + 8, d["rohr_y0"][1] - 8 - me["bein_breite"]]
+    d["stab_y0"] = d["bein_y0"][0]
+    d["stab_l"] = d["bein_y0"][1] + me["bein_breite"] - d["bein_y0"][0]
     rippe_y = d["bein_y0"][0] + me["bein_breite"] + 25
     d["rippe_y0"] = [rippe_y, D - rippe_y - me["rippe_breite"]]
 
-    # Klappteile: Lehne dreht um ihre rechte Kante und hebt sich links, Sitz dreht um seine linke Kante
+    # Lehne und Sitz drehen um eine gemeinsame Achse in der Mitte der Fuge
+    d["achse_x"] = d["lehne_x1"] + po["fuge"] / 2
+    d["achs_versatz"] = po["fuge"] / 2
     d["teile"] = {}
-    for teil, achse, richtung, laenge in (("lehne", d["lehne_x1"], -1, d["lehne_l"]),
-                                          ("sitz", d["sitz_x0"], 1, po["sitz_laenge"])):
+    for teil, richtung, laenge in (("lehne", -1, d["lehne_l"]), ("sitz", 1, po["sitz_laenge"])):
         q = p[teil]
+        achse = d["achse_x"]
+        c = d["achs_versatz"]
         tl = {"teil": teil, "achse_x": achse, "dir": richtung, "laenge": laenge, "winkel": q["winkel"],
-              "s": q.get("stuetze_abstand", q.get("bock_abstand")), "l": q.get("stuetze_laenge", 0),
-              "u0": 40, "u1": laenge - 10}
+              "s": q["stuetze_abstand"], "l": q["stuetze_laenge"], "u0": c + 40, "u1": c + laenge - 10}
         xa, xb = achse + richtung * tl["u0"], achse + richtung * tl["u1"]
-        tl["leiste_x0"], tl["leiste_x1"] = min(xa, xb), max(xa, xb)
-        tl["rippe_l"] = tl["s"] + tl["l"] - 45 if teil == "lehne" else 0
+        tl["schiene_x0"], tl["schiene_x1"] = min(xa, xb), max(xa, xb)
+        tl["rippe_l"] = min(tl["s"] + 40, laenge - 30) if teil == "lehne" else 0
         d["teile"][teil] = tl
     return d
 
@@ -162,81 +162,65 @@ def gx(tl, u):
 
 
 def rasten(p, d, teil, s=None, l=None):
-    """Raststellungen der Stütze: Position je Winkel, Stützkraft, Achskraft."""
+    """Lochpositionen der Gleitschiene je Winkel (0° = flach), Stützkraft, Achskraft."""
     tl, q, me, last = d["teile"][teil], p[teil], p["mechanik"], p["last"]
     s = s or tl["s"]
     l = l or tl["l"]
-    vA, zN = d["vA"], d["rast_z"]
+    vA, zN = d["vA"], d["schiene_z"]
     F_last = q["last_anteil"] * last["nutzer_kg"] * G * last["dynamik"]
     out = []
-    for a in tl["winkel"]:
+    for a in [0] + list(tl["winkel"]):
         r = math.radians(a)
         Ax = s * math.cos(r) - vA * math.sin(r)
         Az = s * math.sin(r) + vA * math.cos(r)
         dz = Az - zN
-        if dz >= l:
+        if abs(dz) >= l:
             out.append({"winkel": a, "ok": False})
             continue
         n = Ax + math.sqrt(l * l - dz * dz)
-        ux, uz = (Ax - n) / l, dz / l             # Richtung Rast → Gelenk (Druckstab)
+        ux, uz = (Ax - n) / l, dz / l             # Richtung Fuß → Gelenk (Druckstab)
         hebel = Ax * uz - Az * ux
-        # Lastfall 1: Gewicht senkrecht nach unten; Lastfall 2: Last senkrecht auf die Polsterfläche.
-        lastfaelle = [
-            ((0.0, -F_last), F_last * (q["last_abstand"] * math.cos(r) - me["achse_unter_oberkante"] * math.sin(r))),
-            ((F_last * math.sin(r), -F_last * math.cos(r)), F_last * q["last_abstand"]),
-        ]
         F, R = 0.0, 0.0
-        for (Lx, Lz), M in lastfaelle:
-            Fi = M / hebel
-            F = max(F, Fi)
-            R = max(R, math.hypot(-Fi * ux - Lx, -Fi * uz - Lz))
+        if a > 0:
+            lastfaelle = [
+                ((0.0, -F_last), F_last * (q["last_abstand"] * math.cos(r) - me["achse_unter_oberkante"] * math.sin(r))),
+                ((F_last * math.sin(r), -F_last * math.cos(r)), F_last * q["last_abstand"]),
+            ]
+            for (Lx, Lz), M in lastfaelle:
+                Fi = M / hebel
+                F = max(F, Fi)
+                R = max(R, math.hypot(-Fi * ux - Lx, -Fi * uz - Lz))
         out.append({"winkel": a, "ok": True, "n": n, "F": F, "R": R,
                     "neigung": math.degrees(math.atan2(uz, -ux))})
-    return out, s + l, F_last
+    return out, F_last
 
 
-def bock(p, d):
-    """Sitz: je Winkel ein Klappbügel (ineinander geschachtelt). Höhe über dem Deckel und Kräfte."""
-    tl, q, me, last = d["teile"]["sitz"], p["sitz"], p["mechanik"], p["last"]
-    vb = -(d["polster_h"] - me["achse_unter_oberkante"])      # Unterseite Sitzplatte relativ zur Achse
-    F_last = q["last_anteil"] * last["nutzer_kg"] * G * last["dynamik"]
-    stufen, fehler = [], []
-    for i, a in enumerate(tl["winkel"]):
-        r = math.radians(a)
-        u_i = q["bock_abstand"] - i * q["stufe"]
-        u = (u_i + vb * math.sin(r)) / math.cos(r)
-        h = d["achse_z"] + u * math.sin(r) + vb * math.cos(r) - d["deckel_z1"]
-        M = F_last * q["last_abstand"]                          # ungünstiger Fall: Last senkrecht aufs Polster
-        F = M / u_i
-        stufen.append({"winkel": a, "u": u_i, "h": h, "F": F, "R": math.hypot(F_last - F, 0)})
-    for s_ in stufen:
-        if s_["u"] - s_["h"] - 10 < tl["u0"]:
-            fehler.append(f"Bügel {s_['winkel']}° zu hoch, er passt umgeklappt nicht unter den Sitz")
-    return stufen, q["bock_abstand"], F_last, fehler
-
-
-def pruefe_rasten(p, d, teil, rs, park):
+def pruefe_rasten(p, d, teil, rs):
+    """Rastlöcher für die Arbeitswinkel; flach steht der Gleitschuh am Endanschlag (Kugelschnäpper)."""
     tl, me = d["teile"][teil], p["mechanik"]
-    fehler = [f"{r['winkel']}°: Stütze zu kurz" for r in rs if not r["ok"]]
-    pos = sorted([r["n"] for r in rs if r["ok"]] + [park])
+    fehler = [f"{r['winkel']}°: Stütze erreicht die Schiene nicht" for r in rs if not r["ok"]]
+    pos = sorted(r["n"] for r in rs if r["ok"] and r["winkel"] > 0)
+    anschlag = max((r["n"] for r in rs if r["ok"] and r["winkel"] == 0), default=0)
     lo, hi = tl["u0"] + 10, tl["u1"] - 10
+    if anschlag > hi:
+        fehler.append(f"Endanschlag (flach) bei {fmt(anschlag, 0)} mm liegt außerhalb der Schiene")
     if pos and (pos[0] < lo or pos[-1] > hi):
-        fehler.append(f"Rasten außerhalb der Leiste ({fmt(pos[0], 0)}–{fmt(pos[-1], 0)} mm, erlaubt {fmt(lo, 0)}–{fmt(hi, 0)} mm)")
+        fehler.append(f"Löcher außerhalb der Schiene ({fmt(pos[0], 0)}–{fmt(pos[-1], 0)} mm, erlaubt {fmt(lo, 0)}–{fmt(hi, 0)} mm)")
     abst = min((b_ - a_ for a_, b_ in zip(pos, pos[1:])), default=999)
-    if abst < me["min_rastabstand"]:
-        fehler.append(f"Rasten zu dicht ({fmt(abst, 0)} mm < {me['min_rastabstand']} mm)")
+    if abst < me["loch_abstand_min"]:
+        fehler.append(f"Löcher zu dicht ({fmt(abst, 0)} mm < {me['loch_abstand_min']} mm)")
     return fehler, abst
 
 
 def suche_stuetze(p, d):
     """Sucht je Klappteil Anlenkpunkt und Länge der Stütze mit kleinster Stützkraft."""
-    for teil in ("lehne",):
+    for teil in TEILE:
         tl = d["teile"][teil]
         treffer = []
         for s in range(60, int(tl["laenge"]), 10):
             for l in range(60, int(tl["laenge"]), 10):
-                rs, park, _ = rasten(p, d, teil, s, l)
-                if not pruefe_rasten(p, d, teil, rs, park)[0]:
+                rs, _ = rasten(p, d, teil, s, l)
+                if not pruefe_rasten(p, d, teil, rs)[0]:
                     treffer.append((max(r["F"] for r in rs), s, l))
         treffer.sort()
         print(f"[{teil}] Winkel {tl['winkel']}, Länge {tl['laenge']} mm – beste Stützen (max. Stützkraft, Abstand, Länge):")
@@ -244,6 +228,25 @@ def suche_stuetze(p, d):
             print(f"  {F:6.0f} N   stuetze_abstand = {s}   stuetze_laenge = {l}")
         if not treffer:
             print("  keine Lösung – Winkel oder Länge ändern")
+
+
+def kante(p, d, a):
+    """Abstand der gerundeten Polster-Innenkante von der gemeinsamen Achse (waagerecht), angestellt um a°.
+    Die Kante beginnt c = Fuge/2 neben der Achse; die Rundung (Radius r) liegt e − r über der Achse."""
+    e, r = p["mechanik"]["achse_unter_oberkante"], p["polster"]["radius"]
+    c, w = d["achs_versatz"], math.radians(a)
+    rundung = (c + r) * math.cos(w) - (e - r) * math.sin(w) - r
+    flanke = c * math.cos(w) - (e - r) * math.sin(w) if e > r else c * math.cos(w)
+    return min(rundung, flanke)
+
+
+def fuge_pruefen(p, d):
+    """Kleinster Abstand der Polsterkanten über alle Stellungskombinationen."""
+    kombis = []
+    for al in [0] + d["teile"]["lehne"]["winkel"]:
+        for as_ in [0] + d["teile"]["sitz"]["winkel"]:
+            kombis.append((kante(p, d, al) + kante(p, d, as_), al, as_))
+    return min(kombis)
 
 
 def hanteln(p):
@@ -258,35 +261,55 @@ def hanteln(p):
         seg = R * R * math.acos((R - ab) / R) - (R - ab) * math.sqrt(2 * R * ab - ab * ab) if ab else 0
         A = math.pi * R * R - seg
         m_kopf = (kg - m_griff) / 2
-        lk = m_kopf / (A * rs_) + math.pi * D * fa ** 2 / A   # Fasenvolumen ausgleichen
+        lk = m_kopf / (A * rs_) + math.pi * D * fa ** 2 / A
         out.append({"kg": kg, "D": D, "lk": lk, "laenge": gl + 2 * lk, "m_kopf": m_kopf,
                     "kern_l": gl + 2 * h["gewinde_tiefe"], "liegehoehe": D - ab})
     return out, m_griff
 
 
 def pack(p, d, hs):
-    """Verteilt Hanteln und Inventar auf die Zellen (schwerste Teile zuerst, unten zuerst)."""
+    """Hanteln einzeln in Aufnahmen (nur Hantelbereich), Zubehör im Zubehörbereich; schwer zuerst, unten zuerst."""
     gap = p["inventar"]["abstand"]
-    ah = p["korpus"]["ablage_h"]
-    items = [{"name": f"Kurzhanteln {fmt(x['kg'])} kg (Paar)", "typ": "khr", "kg": 2 * x["kg"],
-              "w": 2 * x["D"] + gap, "h": x["liegehoehe"] + ah, "d": x["laenge"],
-              "kopf": x["D"], "kopf_l": x["lk"]} for x in hs]
+    k = p["korpus"]
+    items = []
+    for x in hs:
+        for nr in (1, 2):
+            items.append({"name": f"Kurzhantel {fmt(x['kg'])} kg ({nr})", "typ": "khr", "kg": x["kg"],
+                          "w": x["D"] + k["halter_anschlag"], "h": x["D"] + k["halter_luft"], "d": x["laenge"],
+                          "kopf": x["D"], "kopf_l": x["lk"], "nur_fach": 0})
     for it in p.get("inhalt", []):
-        items.append({**it, "w": it["breite"], "h": it["hoehe"], "d": it["tiefe"]})
+        items.append({**it, "w": it["breite"], "h": it["hoehe"], "d": it["tiefe"], "nur_fach": 1})
     items.sort(key=lambda i: -i["kg"])
+
+    # Die Rahmenstützen stehen vorn und hinten in den Fächern. Hanteln (Aufnahmen auf den Traversen
+    # zwischen den Stützen) und Teile, die in der Tiefe an die Stützen reichen, liegen neben ihnen.
+    st = p["rahmen"]["stuetze"]
+    frei_y = (d["stuetze_y"][0] + st, d["stuetze_y"][1])
+    stuetzen = [(x, x + st) for x in d["stuetze_x"]]
+
+    def stelle(z, w, tief, hantel):
+        x = z["x0"] + belegt[z["name"]]
+        y = d["fach_y0"] + (z["tiefe"] - tief) / 2
+        if hantel or y < frei_y[0] or y + tief > frei_y[1]:
+            for s0, s1 in stuetzen:
+                if x < s1 + gap and x + w + gap > s0:
+                    x = s1 + gap
+        return x, y
 
     belegt = {z["name"]: gap for z in d["zellen"]}
     platz, fehlt = [], []
     for it in items:
-        for z in d["zellen"]:
-            if (belegt[z["name"]] + it["w"] + gap <= z["breite"]
-                    and it["h"] + 10 <= z["zugang"]
-                    and it["d"] <= z["tiefe"]):
-                x = z["x0"] + belegt[z["name"]]
-                y = d["fach_y0"] + (z["tiefe"] - it["d"]) / 2
-                platz.append({**it, "zelle": z["name"], "fach": z["fach"],
+        lagen = [(it["w"], it["d"])]
+        if it["typ"] == "box" and it["w"] != it["d"]:
+            lagen.append((it["d"], it["w"]))            # Zubehör darf gedreht liegen
+        for z, (w, tief) in ((z, l) for z in d["zellen"] for l in lagen):
+            if z["fach"] != it["nur_fach"] or it["h"] + 10 > z["zugang"] or tief > z["tiefe"]:
+                continue
+            x, y = stelle(z, w, tief, it["typ"] == "khr")
+            if x + w + gap <= z["x0"] + z["breite"]:
+                platz.append({**it, "w": w, "d": tief, "zelle": z["name"], "fach": z["fach"],
                               "ebene": z["ebene"], "x": x, "y": y, "z": z["z0"]})
-                belegt[z["name"]] += it["w"] + gap
+                belegt[z["name"]] = x + w + gap - z["x0"]
                 break
         else:
             fehlt.append(it)
@@ -306,184 +329,171 @@ def scad_value(v):
 
 
 def write_scad(p, d, platz, rast):
-    k, rt, ro, po, me = p["korpus"], p["rolltuer"], p["rollen"], p["polster"], p["mechanik"]
+    k, rt, ro, po, me, ra = p["korpus"], p["rolltuer"], p["rollen"], p["polster"], p["mechanik"], p["rahmen"]
     werte = {k_: d[k_] for k_ in (
         "L", "D", "H", "R", "t", "ti", "polster_h", "polster_z0", "rand_top", "deckel_z0", "deckel_z1",
         "boden_z0", "boden_z1", "korpus_h", "innen_l", "innen_h",
         "pad_y0", "pad_b", "pad_r_aussen", "lehne_x0", "lehne_x1", "lehne_l", "sitz_x0", "sitz_x1",
         "rt_x0", "rt_x1", "rt_len", "rt_y0", "rt_n", "rt_b", "rt_hinten_y0",
         "fach_y0", "fach_y1", "fach_tiefe", "tasche_x0", "tasche_x1", "mw_x", "fach_x0", "fach_breiten",
-        "fuss_pos", "rollen_pos", "pedal_x",
-        "achse_z", "vA", "rast_z", "park_tiefe", "leiste_y0", "bein_y0", "stab_y0", "stab_l", "rippe_y0")}
+        "ebene_z0", "ebene_z1", "rohr_y0", "stuetze_x", "stuetze_y", "fuss_pos", "rollen_pos", "pedal_x",
+        "achse_z", "vA", "schiene_z", "bein_y0", "stab_y0", "stab_l", "rippe_y0", "achs_versatz")}
     werte.update({
         "polster_platte": po["platte"], "polster_r": po["radius"], "rand": po["rand"],
         "sockel_h": k["sockel_hoehe"], "sockel_einzug": k["sockel_einzug"],
-        "fuss_d": k["fuss_d"], "fuss_h": k["fuss_h"], "ablage_h": k["ablage_h"],
-        "fachboden": k["fachboden"],
-        "fachboden_z0": d["fachboden_z0"] or 0, "fachboden_z1": d["fachboden_z1"] or 0,
+        "fuss_d": k["fuss_d"], "fuss_h": k["fuss_h"], "halter_luft": k["halter_luft"],
         "rt_fuge": rt["lamelle_fuge"], "rt_dicke": rt["lamelle_dicke"],
-        "buegel_d": me["buegel_d"], "rast_tiefe": me["rast_tiefe"], "leiste_b": me["leiste_breite"],
-        "bein_b": me["bein_breite"], "bein_t": me["bein_dicke"],
-        "rippe_b": me["rippe_breite"], "rippe_h": me["rippe_hoehe"],
-        "gelenkplatte": me["gelenkplatte"],
+        "bein_b": me["bein_breite"], "bein_t": me["bein_dicke"], "bolzen_d": me["bolzen_d"],
+        "schiene_h": me["schiene_h"], "schiene_b": me["schiene_b"],
+        "rippe_b": me["rippe_breite"], "rippe_h": me["rippe_hoehe"], "gelenkplatte": me["gelenkplatte"], "konsole_b": me["konsole_breite"],
+        "rohr_b": ra["rohr_b"], "rohr_h": ra["rohr_h"], "stuetze_q": ra["stuetze"],
+        "traverse_b": ra["traverse_b"], "traverse_t": ra["traverse_t"],
         "rolle_d": ro["durchmesser"],
         # [typ, x, y, z, breite, hoehe, tiefe, kopf, kopflänge]
         "inhalt": [[i["typ"], i["x"], i["y"], i["z"], i["w"], i["h"], i["d"], i.get("kopf", 0), i.get("kopf_l", 0)]
                    for i in platz],
-        "abstand": p["inventar"]["abstand"],
         "abflachung": p["hanteln"]["abflachung"], "griff_d": p["hanteln"]["griff_d"],
     })
     for teil in TEILE:
         tl = d["teile"][teil]
+        rs, _ = rast[teil]
         werte.update({f"{teil}_achse_x": tl["achse_x"], f"{teil}_dir": tl["dir"], f"{teil}_laenge": tl["laenge"],
-                      f"{teil}_winkel_liste": tl["winkel"],
-                      f"{teil}_leiste_x0": tl["leiste_x0"], f"{teil}_leiste_x1": tl["leiste_x1"]})
-    rs, park, _ = rast["lehne"]
-    werte.update({"lehne_s": d["teile"]["lehne"]["s"], "lehne_l_stuetze": d["teile"]["lehne"]["l"],
-                  "lehne_rasten": [r_["n"] for r_ in rs if r_["ok"]], "lehne_park": park,
-                  "lehne_rippe_l": d["teile"]["lehne"]["rippe_l"]})
-    stufen, gelenk, _, _ = rast["sitz"]
-    werte.update({"sitz_stufen": [[s_["u"], s_["h"]] for s_ in stufen], "sitz_bock_gelenk": gelenk})
+                      f"{teil}_s": tl["s"], f"{teil}_l_stuetze": tl["l"], f"{teil}_winkel_liste": tl["winkel"],
+                      f"{teil}_loecher": [r_["n"] for r_ in rs if r_["ok"] and r_["winkel"] > 0],
+                      f"{teil}_anschlag": max(r_["n"] for r_ in rs if r_["winkel"] == 0),
+                      f"{teil}_schiene_x0": tl["schiene_x0"], f"{teil}_schiene_x1": tl["schiene_x1"],
+                      f"{teil}_rippe_l": tl["rippe_l"]})
     lines = ["// AUTOMATISCH ERZEUGT von tools/build.py aus params.toml – nicht von Hand ändern.", ""]
     lines += [f"{k_} = {scad_value(v)};" for k_, v in werte.items()]
     (ROOT / "cad" / "params.scad").write_text("\n".join(lines) + "\n")
 
 
-def teile(p, d):
-    """Zuschnittliste: (Gruppe, Bezeichnung, Anzahl, Länge, Breite, Dicke, Hinweis)."""
+def teile(p, d, platz):
+    """Planungsstückliste: (Gewerk, Bezeichnung, Anzahl, Länge, Breite, Dicke, Hinweis)."""
     t, ti, R, L, D = d["t"], d["ti"], d["R"], d["L"], d["D"]
-    k, rt, po, me = p["korpus"], p["rolltuer"], p["polster"], p["mechanik"]
+    k, rt, po, me, ra, ro = p["korpus"], p["rolltuer"], p["polster"], p["mechanik"], p["rahmen"], p["rollen"]
     se, sh, fh = k["sockel_einzug"], k["sockel_hoehe"], k["fuss_h"]
-    lb, le = d["teile"]["lehne"], d["teile"]["sitz"]
-    massiv, platte, metall = "Eiche massiv", "Multiplex eichefurniert", "Stahl und Beschläge"
+    lb, st = d["teile"]["lehne"], d["teile"]["sitz"]
+    holz, metall, fahr = "Holzbau (Schreiner)", "Metallbau und Beschläge", "Fahrwerk"
+    n_hantel = len([i for i in platz if i["typ"] == "khr"])
+    rohr_l = L - 2 * t - 6
+    st_h = d["rand_top"] - k["fuss_h"] - ra["rohr_h"]
     return [
-        (massiv, "Deckel", 1, L - 2 * t, D - 2 * t, t, f"Ecken R {R - t}, Laufnut Rolltür {rt['nut']} × {rt['nut']} (Tasche, hinten)"),
-        (massiv, "Boden", 1, L - 2 * t, D - 2 * t, t, f"Ecken R {R - t}, Laufnut Rolltür (Tasche, hinten)"),
-        (massiv, "Stirnseite", 2, d["korpus_h"], D - 2 * R, t, "Faser senkrecht, zwischen den Eckstollen"),
-        (massiv, "Eckstollen", 4, d["korpus_h"], R, R, f"aus Massivholz verleimt, außen R {R} / innen R {R - t} ausgeformt, Faser senkrecht"),
-        (massiv, "Frontleiste oben", 1, L - 2 * R, po["rand"] + t, t, "bildet vorn den Rand der Polsterwanne, Laufnut unten"),
-        (massiv, "Frontleiste unten", 1, L - 2 * R, t, t, "Laufnut oben"),
-        (massiv, "Rolltür-Lamelle", d["rt_n"], d["rt_lamelle_l"], round(d["rt_b"], 1), rt["lamelle_dicke"],
-         f"Vorderseite gerundet (Kannelur), Zapfen oben/unten, auf Leinen geleimt, Fuge {fmt(rt['lamelle_fuge'])}"),
-        (massiv, "Rastleiste Lehne", 2, lb["leiste_x1"] - lb["leiste_x0"], me["leiste_breite"], po["rand"], f"schwarz gebeizt, {len(lb['winkel'])} Rasten + Parkrast, verleimt"),
-        (massiv, "Auflageleiste Sitz", 2, le["leiste_x1"] - le["leiste_x0"], me["leiste_breite"], po["rand"], "schwarz gebeizt, verleimt; die Klappbügel liegen dazwischen"),
-        (massiv, "Lehnenrippe", 2, lb["rippe_l"], me["rippe_breite"], me["rippe_hoehe"], "unter der Lehnenplatte verleimt"),
-        (massiv, "Polster-Anleimer", 1, round(2 * (d["lehne_l"] + po["sitz_laenge"] + 2 * d["pad_b"])), 8, po["platte"], "Gesamtlänge für beide Polsterplatten, sichtbare Eichenkante, Ecken gerundet"),
-        (massiv, "Sockelzarge", 1, round(rr_umfang(L - 2 * se, D - 2 * se, R - se)), sh - fh, 20, f"umlaufend, Ecken R {R - se} (formverleimt oder gestäbt), Abwicklung"),
-        (platte, "Rückwand", 1, L - 2 * R, d["korpus_h"], t, "Eichenfurnier stehend, Sichtseite zum Bett, zwischen den Eckstollen"),
-        (platte, "Trennwand", d["n_mw"], d["fach_tiefe"], d["innen_h"], ti, "endet vor der hinteren Rolltürbahn"),
-        *[(platte, f"Fachboden Fach {i + 1}", 1 if k["fachboden"] else 0, round(bb - 2, 1), d["fach_tiefe"] - 5, ti, "auf Bodenträgern")
-          for i, bb in enumerate(d["fach_breiten"])],
-        (platte, "Lehnenplatte", 1, d["lehne_l"], d["pad_b"], po["platte"], f"Ecken außen R {d['pad_r_aussen']}, Unterseite furniert"),
-        (platte, "Sitzplatte", 1, po["sitz_laenge"], d["pad_b"], po["platte"], f"Ecken außen R {d['pad_r_aussen']}, Unterseite furniert"),
-        (metall, "Gelenkplatte Korpus (2 Achsen)", 2, 110, 90, me["gelenkplatte"], "gelasert, 2 Bohrungen Ø 10,5 im Abstand der Fuge, Fuß 4 × M6 durch den Deckel"),
-        (metall, "Gelenkplatte Lehne / Sitz", 4, 110, 70, me["gelenkplatte"], "gelasert, Lasche unter die Polsterplatte gekantet"),
-        (metall, "Gegenplatte Flachstahl", 2, 140, 60, 6, "unter dem Deckel, nimmt Zugkräfte der Gelenke auf"),
-        (metall, "Stütze Lehne: Bein", 2, lb["l"] + 30, me["bein_breite"], me["bein_dicke"], "Flachstahl, Bohrung Gelenk, mit Querstab verschweißt"),
-        (metall, "Querstab Stütze Lehne", 1, round(d["stab_l"]), me["buegel_d"], me["buegel_d"], "Rundstahl"),
-        *[(metall, f"Klappbügel Sitz {s_['winkel']}°", 1, round(s_["h"]), 240 - 24 * i, 8,
-            "U-Bügel Flachstahl 30 × 8, Auflage gummiert, Scharnier auf dem Deckel; liegt sonst flach in der Wanne")
-          for i, s_ in enumerate(reversed(bock(p, d)[0]))],
-        (metall, "Absenkrolle (lenkbare Doppelrolle)", p["rollen"]["anzahl"], p["rollen"]["durchmesser"], p["rollen"]["durchmesser"], 0, "auf Hubplatte, parkettgeeignet"),
-        (metall, "Exzenterwelle mit Hubnocken", 1, L - 2 * (k["fuss_einzug"] + 90) + 80, 20, 20, "läuft im Sockel, hebt alle 4 Rollen gleichzeitig"),
-        (metall, "Fußhebel Bronze", 1, 90, 30, 6, "rastet oben (steht) und unten (rollt) über Totpunkt"),
+        (holz, "Wannenboden (Deckel)", 1, L - 2 * t, D - 2 * t, t, f"furniert, Ecken R {R - t}, Laufnut Rolltür {rt['nut']} × {rt['nut']}, Durchbrüche für die Rahmenstützen"),
+        (holz, "Boden", 1, L - 2 * t, D - 2 * t, t, f"furniert, Ecken R {R - t}, Laufnut Rolltür, Durchbrüche für die Stützen"),
+        (holz, "Stirnseite", 2, d["korpus_h"], D - 2 * R, t, "furniert, Furnier stehend"),
+        (holz, "Eckrundung", 4, d["korpus_h"], R, R, f"formverleimt oder massiv, außen R {R}, Furnier stehend"),
+        (holz, "Rückwand", 1, L - 2 * R, d["korpus_h"], t, "furniert stehend, Sichtseite zum Bett, Wartungsöffnung vorsehen"),
+        (holz, "Frontleiste oben", 1, L - 2 * R, po["rand"] + t, t, "massiv Eiche, bildet vorn den Rand, Laufnut unten"),
+        (holz, "Frontleiste unten", 1, L - 2 * R, t, t, "massiv Eiche, Laufnut oben"),
+        (holz, "Rolltür-Lamelle", d["rt_n"], d["rt_lamelle_l"], round(d["rt_b"], 1), rt["lamelle_dicke"],
+         f"Eiche massiv, Vorderseite gerundet, auf flexiblem Träger, Fuge {fmt(rt['lamelle_fuge'])}"),
+        (holz, "Trennwand", d["n_mw"], d["fach_tiefe"], d["innen_h"], ti, "nicht tragend, endet vor dem Rücklaufkanal"),
+        (holz, "Fachboden Zubehör", 1, round(d["fach_breiten"][-1] - 2), d["fach_tiefe"] - 5, ti, "auf Bodenträgern, Ausklinkungen für die Rahmenstützen"),
+        (holz, "Lehnenplatte", 1, lb["laenge"], d["pad_b"], po["platte"], f"Multiplex, Eichenkante, Ecken außen R {d['pad_r_aussen']}, 2 Rippen 60 × 18"),
+        (holz, "Sitzplatte", 1, st["laenge"], d["pad_b"], po["platte"], f"Multiplex, Eichenkante, Ecken außen R {d['pad_r_aussen']}"),
+        (holz, "Sockelzarge", 1, round(rr_umfang(L - 2 * se, D - 2 * se, R - se)), sh - fh, 20, f"umlaufend, Ecken R {R - se}, Pedalausschnitt vorn rechts, Abwicklung"),
+        (metall, "Längsrohr Innenrahmen", 2, rohr_l, ra["rohr_b"], ra["rohr_h"], f"Rechteckrohr {ra['rohr_b']} × {ra['rohr_h']} × {ra['rohr_t']}, liegt in der Wanne, trägt Polster und Gelenke"),
+        (metall, "Stütze Innenrahmen", 2 * len(d["stuetze_x"]), round(st_h), ra["stuetze"], ra["stuetze"], f"Vierkantrohr {ra['stuetze']} × {ra['stuetze']} × 2, unten mit Gewinde für die Füße"),
+        (metall, "Querrohr Innenrahmen", 2 * len(d["stuetze_x"]), round(d["stuetze_y"][1] - d["stuetze_y"][0] + ra["stuetze"]), ra["stuetze"], ra["stuetze"], "oben und unten zwischen den Stützen"),
+        (metall, "Hantel-Traverse", 4, round(d["fach_breiten"][0]), ra["traverse_b"], ra["traverse_t"], "Flachstahl hochkant, zwischen den Stützen, je Ebene 2"),
+        (metall, "Hantelaufnahme", n_hantel, 0, 0, 0, "2 gepolsterte Auflagen am Griff, seitliche Anschläge, lösbarer Sicherungsbügel"),
+        (metall, "Gelenkkonsole", 2, round(d["achse_z"] - d["deckel_z1"] - ra["rohr_h"] + 10), me["konsole_breite"], me["gelenkplatte"], "auf die Längsrohre geschweißt, gemeinsame Achse M10 für Lehne und Sitz"),
+        (metall, "Gelenklasche Lehne / Sitz", 4, 110, 70, me["gelenkplatte"], "unter die Polsterplatte geschraubt, auf derselben Achse mit Gleitlagern"),
+        (metall, "Gleitstütze Lehne", 1, lb["l"], round(d["stab_l"]), me["bein_dicke"], f"2 Beine {me['bein_breite']} × {me['bein_dicke']}, Steg, 2 Gleitschuhe mit Indexbolzen Ø {me['bolzen_d']}"),
+        (metall, "Gleitstütze Sitz", 1, st["l"], round(d["stab_l"]), me["bein_dicke"], f"2 Beine {me['bein_breite']} × {me['bein_dicke']}, Steg, 2 Gleitschuhe mit Indexbolzen Ø {me['bolzen_d']}"),
+        (metall, "Gleitschiene Lehne", 2, round(lb["schiene_x1"] - lb["schiene_x0"]), me["schiene_b"], me["schiene_h"], f"C-Profil mit {len(lb['winkel']) + 1} Rastlöchern, auf Querrohren"),
+        (metall, "Gleitschiene Sitz", 2, round(st["schiene_x1"] - st["schiene_x0"]), me["schiene_b"], me["schiene_h"], f"C-Profil mit {len(st['winkel']) + 1} Rastlöchern"),
+        (metall, "Indexbolzen mit Zugknopf", 4, me["bolzen_d"], 0, 0, "federnd, rastet selbsttätig, formschlüssig"),
+        (fahr, "Rollenrahmen", 1, round(d["rollen_pos"][1][0] - d["rollen_pos"][0][0] + 60), round(d["rollen_pos"][2][1] - d["rollen_pos"][0][1] + 60), 20, "Stahlrahmen, in den Stützen geführt"),
+        (fahr, "Lenkrolle", ro["anzahl"], ro["durchmesser"], 0, 0, "gummiert, parkettgeeignet, mit Feststeller"),
+        (fahr, "Exzenterwelle", 2, round(d["stuetze_y"][1] - d["stuetze_y"][0]), 20, 20, "quer, über Koppelstange verbunden"),
+        (fahr, "Fußpedal (Bronze)", 1, 90, 30, 6, "versenkt im Sockel rechts, Totpunktrast in beiden Lagen"),
+        (fahr, "Stellfuß", 4, k["fuss_d"], k["fuss_h"], 0, "an den Eckstützen, höhenverstellbar, Filz"),
     ]
 
 
-def ei(rects):
-    """Verbundquerschnitt aus Rechtecken (Breite, Höhe, z-Unterkante, E) → EI und Schwerpunkt.
-    Aussparungen werden mit negativem E abgezogen."""
-    EA = sum(E * b * h for b, h, _, E in rects)
-    zs = sum(E * b * h * (z0 + h / 2) for b, h, z0, E in rects) / EA
-    EI = sum(E * (b * h ** 3 / 12 + b * h * (z0 + h / 2 - zs) ** 2) for b, h, z0, E in rects)
-    return EI, zs
+def rohr_I(b, h, w):
+    return (b * h ** 3 - (b - 2 * w) * (h - 2 * w) ** 3) / 12
 
 
 def statik(p, d, platz, rast):
-    m, last, me, k, po = p["material"], p["last"], p["mechanik"], p["korpus"], p["polster"]
-    t, Em, Ep = d["t"], m["E_massiv"], m["E_platte"]
+    m, last, me, k, po, ra = p["material"], p["last"], p["mechanik"], p["korpus"], p["polster"], p["rahmen"]
+    Es, Ep = m["E_stahl"], m["E_platte"]
     F = last["nutzer_kg"] * G * last["dynamik"]
     res = []
-
-    # 1. Vorderkante: Frontleiste oben (Rand) + Deckelstreifen + Rastleiste, Laufnut abgezogen
-    nut = p["rolltuer"]["nut"]
-    rects = [(t, t + po["rand"], 0, Em), (nut, nut, 0, -Em),
-             (100 - t, t, 0, Em),
-             (me["leiste_breite"], po["rand"] - me["rast_tiefe"], t, Em)]
-    EI, _ = ei(rects)
-    l = max(d["fach_breiten"]) + d["ti"]
-    res.append(("Vorderkante: Frontleiste mit Rand + Deckel + Rastleiste (50 % der Last)", 0.5 * F, l,
-                0.5 * F * l ** 3 / (48 * EI)))
-
-    # 2. Lehnenplatte flach auf den Rastleisten (Rippen nicht angesetzt)
-    l2 = d["leiste_y0"][1] - d["leiste_y0"][0]
+    # 1. Längsrohr des Innenrahmens zwischen zwei Stützen, halbe Last in Feldmitte
+    sx = d["stuetze_x"]
+    l = max(b_ - a_ for a_, b_ in zip(sx, sx[1:]))
+    I = rohr_I(ra["rohr_b"], ra["rohr_h"], ra["rohr_t"])
+    res.append((f"Längsrohr {ra['rohr_b']} × {ra['rohr_h']} × {ra['rohr_t']} (50 % der Last)", 0.5 * F, l,
+                0.5 * F * l ** 3 / (48 * Es * I)))
+    # 2. Polsterplatte zwischen den Längsrohren
+    l2 = d["rohr_y0"][1] - (d["rohr_y0"][0] + ra["rohr_b"])
     I2 = 300 * po["platte"] ** 3 / 12
-    res.append(("Lehnenplatte flach zwischen den Rastleisten (Streifen 300 mm)", F, l2,
-                5 * F * l2 ** 3 / (384 * Ep * I2)))
-
-    # 3. Klappteile schräg: Überstand hinter dem Stützengelenk
+    res.append(("Polsterplatte zwischen den Längsrohren (Streifen 300 mm)", F, l2, 5 * F * l2 ** 3 / (384 * Ep * I2)))
+    # 3. Klappteile angestellt: Überstand hinter dem Stützengelenk
     for teil in TEILE:
         tl = d["teile"][teil]
-        F_last = rast[teil][2]
-        a = tl["laenge"] - tl["s"]
-        rects3 = [(d["pad_b"], po["platte"], 0, Ep)]
+        F_last = rast[teil][1]
+        a = d["achs_versatz"] + tl["laenge"] - tl["s"]
+        if a <= 0:
+            continue
+        rects = [(d["pad_b"], po["platte"], 0, Ep)]
         if teil == "lehne":
-            rects3.append((2 * me["rippe_breite"], me["rippe_hoehe"], -me["rippe_hoehe"], Em))
-        EI3, _ = ei(rects3)
+            rects.append((2 * me["rippe_breite"], me["rippe_hoehe"], -me["rippe_hoehe"], 11000))
+        EA = sum(E * b * h for b, h, _, E in rects)
+        zs = sum(E * b * h * (z0 + h / 2) for b, h, z0, E in rects) / EA
+        EI = sum(E * (b * h ** 3 / 12 + b * h * (z0 + h / 2 - zs) ** 2) for b, h, z0, E in rects)
         q = F_last * math.cos(math.radians(min(tl["winkel"]))) / tl["laenge"]
-        res.append((f"{NAME[teil]} schräg, Überstand hinter der Stütze ({min(tl['winkel'])}°)", q * a, a,
-                    q * a ** 4 / (8 * EI3)))
-
-    # 4. Fachböden mit dem Inhalt der oberen Ebene
-    if k["fachboden"]:
-        for f, bb in enumerate(d["fach_breiten"]):
-            kg = sum(i["kg"] for i in platz if i["fach"] == f and i["ebene"] == "oben")
-            Ff = kg * G * 2
-            I4 = (d["fach_tiefe"] - 5) * d["ti"] ** 3 / 12
-            res.append((f"Fachboden Fach {f + 1} ({fmt(kg)} kg × 2)", Ff, bb,
-                        5 * Ff * bb ** 3 / (384 * Ep * I4)))
+        res.append((f"{NAME[teil]} angestellt, Überstand hinter der Stütze", q * a, a, q * a ** 4 / (8 * EI)))
+    # 4. Hantel-Traverse der oberen Ebene (2 Stück), Flachstahl hochkant
+    kg = sum(i["kg"] for i in platz if i["fach"] == 0 and i["ebene"] == "oben")
+    Ft = kg * G * 2 / 2
+    lt = d["fach_breiten"][0]
+    It = ra["traverse_t"] * ra["traverse_b"] ** 3 / 12
+    res.append((f"Hantel-Traverse obere Ebene ({fmt(kg)} kg × 2, je Traverse)", Ft, lt, 5 * Ft * lt ** 3 / (384 * Es * It)))
     return res
 
 
-def knicken(p, teil, d, F_max):
+def knicken(p, d, teil, F_max):
     me = p["mechanik"]
     I = me["bein_breite"] * me["bein_dicke"] ** 3 / 12
-    F_cr = 2 * math.pi ** 2 * E_STAHL * I / d["teile"][teil]["l"] ** 2
+    F_cr = 2 * math.pi ** 2 * p["material"]["E_stahl"] * I / d["teile"][teil]["l"] ** 2
     return F_cr, F_cr / F_max if F_max else 99
 
 
-def gewicht(p, d):
-    m, po, k, rt, me = p["material"], p["polster"], p["korpus"], p["rolltuer"], p["mechanik"]
+def gewicht(p, d, platz):
+    m, po, k, rt, me, ra = p["material"], p["polster"], p["korpus"], p["rolltuer"], p["mechanik"], p["rahmen"]
     t, L, D, R = d["t"], d["L"], d["D"], d["R"]
     se, sh, fh = k["sockel_einzug"], k["sockel_hoehe"], k["fuss_h"]
-    lb, le = d["teile"]["lehne"], d["teile"]["sitz"]
-    ring = (rr_flaeche(L, D, R) - rr_flaeche(L - 2 * t, D - 2 * t, R - t)) * d["korpus_h"] \
-        - d["rt_len"] * t * d["innen_h"]
-    platten = 2 * rr_flaeche(L - 2 * t, D - 2 * t, R - t) * t
-    lamellen = d["rt_n"] * d["rt_b"] * d["rt_lamelle_l"] * rt["lamelle_dicke"]
-    leisten = sum(2 * (tl["leiste_x1"] - tl["leiste_x0"]) * me["leiste_breite"] * po["rand"] for tl in (lb, le))
-    rippen = 2 * lb["rippe_l"] * me["rippe_breite"] * me["rippe_hoehe"]
-    zarge = rr_umfang(L - 2 * se, D - 2 * se, R - se) * 20 * (sh - fh)
-    v_massiv = ring + platten + lamellen + leisten + rippen + zarge
-    v_platte = (d["n_mw"] * d["fach_tiefe"] * d["innen_h"] * d["ti"]
-                + (sum(d["fach_breiten"]) * d["fach_tiefe"] * d["ti"] if k["fachboden"] else 0)
-                + (po["sitz_laenge"] + d["lehne_l"]) * d["pad_b"] * po["platte"])
-    holz = v_massiv * 1e-9 * m["dichte_massiv"] + v_platte * 1e-9 * m["dichte_platte"]
-    schaum = (po["sitz_laenge"] + d["lehne_l"]) * d["pad_b"] * po["schaum"] * 1e-9 * 45
-    stahl = 7850e-9 * (2 * 110 * 90 * me["gelenkplatte"] + 4 * 110 * 70 * me["gelenkplatte"] + 2 * 140 * 60 * 6
-                       + 2 * (lb["l"] + 30) * me["bein_breite"] * me["bein_dicke"]
-                       + d["stab_l"] * math.pi * (me["buegel_d"] / 2) ** 2) + 1.0 + 3.0   # + Sitzbock, Absenkmechanik
-    rest = 1.5 + 1.5                                                                  # Leder, Beschläge
-    # abgewickelte Flächen: Korpusmantel ohne Rückwand (Multiplex) + Deckel/Boden + Rolltür + Zarge + Leisten
-    flaeche_massiv = (rr_umfang(L, D, R) * d["korpus_h"] - (L - 2 * R) * d["korpus_h"]
-                      + 2 * rr_flaeche(L - 2 * t, D - 2 * t, R - t)
-                      + rr_umfang(L - 2 * se, D - 2 * se, R - se) * (sh - fh)
-                      + (leisten + rippen) / t) * 1e-6
-    flaeche_platte = (d["n_mw"] * d["fach_tiefe"] * d["innen_h"] + sum(d["fach_breiten"]) * d["fach_tiefe"]
-                      + (L - 2 * R) * d["korpus_h"] + (po["sitz_laenge"] + d["lehne_l"]) * d["pad_b"]) * 1e-6
-    return {"holz": holz, "schaum": schaum, "stahl": stahl, "rest": rest,
-            "leer": holz + schaum + stahl + rest,
-            "flaeche_massiv": flaeche_massiv, "flaeche_platte": flaeche_platte}
+    lb, st = d["teile"]["lehne"], d["teile"]["sitz"]
+    mantel = rr_umfang(L, D, R) * d["korpus_h"] - d["rt_len"] * d["innen_h"]
+    platten = 2 * rr_flaeche(L - 2 * t, D - 2 * t, R - t)
+    innen = d["n_mw"] * d["fach_tiefe"] * d["innen_h"] + d["fach_breiten"][-1] * d["fach_tiefe"]
+    v_platte = (mantel + platten) * t + innen * d["ti"] + (lb["laenge"] + st["laenge"]) * d["pad_b"] * po["platte"]
+    v_massiv = (d["rt_n"] * d["rt_b"] * d["rt_lamelle_l"] * rt["lamelle_dicke"]
+                + rr_umfang(L - 2 * se, D - 2 * se, R - se) * 20 * (sh - fh)
+                + 2 * lb["rippe_l"] * me["rippe_breite"] * me["rippe_hoehe"])
+    holz = v_platte * 1e-9 * m["dichte_platte"] + v_massiv * 1e-9 * m["dichte_massiv"]
+    kgm = lambda b, h, w: (2 * (b + h) * w - 4 * w * w) * 7.85e-3        # kg/m Rechteckrohr
+    st_h = d["rand_top"] - k["fuss_h"] - ra["rohr_h"]
+    rahmen = (2 * (L - 2 * t) * kgm(ra["rohr_b"], ra["rohr_h"], ra["rohr_t"])
+              + 2 * len(d["stuetze_x"]) * st_h * kgm(ra["stuetze"], ra["stuetze"], 2)
+              + 2 * len(d["stuetze_x"]) * (d["stuetze_y"][1] - d["stuetze_y"][0]) * kgm(ra["stuetze"], ra["stuetze"], 2)
+              + 4 * d["fach_breiten"][0] * ra["traverse_b"] * ra["traverse_t"] * 7.85e-3) * 1e-3
+    mechanik = (2 * (lb["l"] + st["l"]) * me["bein_breite"] * me["bein_dicke"] * 7.85e-6
+                + 2 * d["stab_l"] * me["bein_breite"] * me["bein_dicke"] * 7.85e-6
+                + 2 * ((lb["schiene_x1"] - lb["schiene_x0"]) + (st["schiene_x1"] - st["schiene_x0"])) * 1.5e-3
+                + 6 * 110 * 70 * me["gelenkplatte"] * 7.85e-6 + 0.1 * len([i for i in platz if i["typ"] == "khr"]))
+    fahrwerk = 6.0
+    schaum = (lb["laenge"] + st["laenge"]) * d["pad_b"] * po["schaum"] * 1e-9 * 45
+    rest = 3.0
+    leer = holz + rahmen + mechanik + fahrwerk + schaum + rest
+    flaeche_platte = (mantel + platten + innen + (lb["laenge"] + st["laenge"]) * d["pad_b"]) * 1e-6
+    flaeche_massiv = (d["rt_len"] * d["innen_h"] + rr_umfang(L - 2 * se, D - 2 * se, R - se) * (sh - fh)) * 1e-6
+    return {"holz": holz, "rahmen": rahmen, "mechanik": mechanik, "fahrwerk": fahrwerk, "schaum": schaum,
+            "rest": rest, "leer": leer, "flaeche_platte": flaeche_platte, "flaeche_massiv": flaeche_massiv}
 
 
 def fmt(x, n=1):
@@ -497,181 +507,172 @@ def zahl(x):
 def write_stueckliste(p, d, liste, platz, gw):
     m = p["material"]
     inhalt = sum(i["kg"] for i in platz)
-    kosten_massiv = gw["flaeche_massiv"] * 1.3 * m["preis_massiv_m2"]
-    kosten_platte = gw["flaeche_platte"] * 1.15 * m["preis_platte_m2"]
-    holz_k = kosten_massiv + kosten_platte
-    out = ["# Stückliste", "",
-           "> Automatisch erzeugt aus `params.toml` mit `python3 tools/build.py`. Nicht von Hand ändern.", ""]
+    k_platte = gw["flaeche_platte"] * 1.25 * m["preis_platte_m2"]
+    k_massiv = gw["flaeche_massiv"] * 1.3 * m["preis_massiv_m2"]
+    holz_mat = k_platte + k_massiv
+    out = ["# Stückliste (Planungsstand)", "",
+           "> Automatisch erzeugt aus `params.toml` mit `python3 tools/build.py`. Nicht von Hand ändern.",
+           "> Planungsstand für Angebot und Abstimmung, **keine Zuschnittliste**: Die erstellt der Schreiner nach "
+           "Abschluss der Beschlagplanung (siehe Studio-Vorentwurf).", ""]
     for gruppe in dict.fromkeys(g for g, *_ in liste):
         out += [f"## {gruppe}", "",
                 "| Teil | Stk. | Länge | Breite | Dicke | Hinweis |",
                 "|---|---:|---:|---:|---:|---|"]
         for g, name, n, l, b, dicke, hinweis in liste:
             if g == gruppe and n:
-                out.append(f"| {name} | {n} | {zahl(l)} | {zahl(b)} | {zahl(dicke) if dicke else '–'} | {hinweis} |")
+                out.append(f"| {name} | {n} | {zahl(l) if l else '–'} | {zahl(b) if b else '–'} | {zahl(dicke) if dicke else '–'} | {hinweis} |")
         out.append("")
     po = p["polster"]
     zug = 2 * (po["schaum"] + 60)
-    leder = ((po["sitz_laenge"] + zug) * (d["pad_b"] + zug) + (d["lehne_l"] + zug) * (d["pad_b"] + zug)) * 1e-6
-    out += ["Maße in mm. Massivholz: Länge = Faserrichtung.", "",
+    lb, st = d["teile"]["lehne"], d["teile"]["sitz"]
+    leder = ((st["laenge"] + zug) * (d["pad_b"] + zug) + (lb["laenge"] + zug) * (d["pad_b"] + zug)) * 1e-6
+    out += ["Maße in mm.", "",
             "## Polster", "",
-            f"- Schaumstoff je Polster {po['schaum']} mm: 30 mm hart (RG 50+) unten, 20 mm mittel (RG 35–40) oben",
-            "- Polyesterwatte 200 g/m² über den Schaum, damit die Kanten weich und voll wirken",
-            f"- Bezug: ca. {fmt(leder, 2)} m² Rindleder, vollnarbig, pigmentiert oder Semianilin mit Schutzfinish "
-            "(kein Anilin- oder Nubukleder: nimmt Schweiß auf), 1,2–1,5 mm, Kedernaht an der Oberkante",
-            "- Das Leder endet oben an der Polsterplatte, die Eichenkante darunter bleibt sichtbar (wie im Bildentwurf)", "",
-            "## Kleinteile", "",
-            "| Teil | Menge | Zweck |", "|---|---:|---|",
-            "| Domino-/Lamello-Verbinder | ca. 50 | Korpus, Eckstollen, Einbauten |",
-            "| Holzleim D3 | 1 | feuchtebeständig (Schweiß, Wischen) |",
-            "| Leinen/Baumwollgewebe + Leim | ca. 1,3 × 0,3 m | Rücken der Rolltür |",
-            "| Gelenkbolzen M10 mit Gleitlagerbuchse, Hutmutter | 4 | Drehachsen von Lehne und Sitz |",
-            "| Lagerböcke, Bolzen M8 | 4 | Gelenke der beiden Stützen |",
-            "| Schrauben M6 durchgehend + Einschlagmuttern | 12 | Gelenkplatten, lösbar |",
-            f"| Bodenträger 5 mm | {4 * d['n_fach'] if p['korpus']['fachboden'] else 0} | Fachböden |",
-            f"| Füße Ø {p['korpus']['fuss_d']} × {p['korpus']['fuss_h']}, schwarz, mit Filz | 4 | unter der Sockelzarge |",
-            "| Hantelablage: Flachstahl schwarz mit Mulden, filzbelegt | 4 | Ebenen der Hantelfächer |",
-            "| Hartwachsöl | 0,75 l | Oberfläche |",
-            "| Beize schwarz | 0,1 l | Rastleisten |", "",
-            "## Gewicht und Kosten (Schätzung)", "",
-            f"- Holz {fmt(gw['holz'])} kg, Stahl inkl. Absenkmechanik {fmt(gw['stahl'])} kg, Schaum {fmt(gw['schaum'])} kg, Leder/Kleinteile {fmt(gw['rest'])} kg",
-            f"- Bank leer: ca. **{fmt(gw['leer'])} kg**, mit Inventar ({fmt(inhalt)} kg): ca. **{fmt(gw['leer'] + inhalt)} kg**", "",
-            "| Posten | Kosten |", "|---|---:|",
-            f"| Eiche massiv, {fmt(gw['flaeche_massiv'], 2)} m² + 30 % Verschnitt à {m['preis_massiv_m2']} €/m² | ca. {fmt(kosten_massiv, 0)} € |",
-            f"| Multiplex eichefurniert, {fmt(gw['flaeche_platte'], 2)} m² + 15 % à {m['preis_platte_m2']} €/m² | ca. {fmt(kosten_platte, 0)} € |",
-            "| Leder, Schaum, Watte | 250–450 € |",
-            "| Polsterei (Arbeit, beide Polster) | 250–450 € |",
-            "| Metallbau: Gelenke, 2 Stützen, Gegenplatten | 250–550 € |",
-            "| Absenkrollen-Mechanik mit Bronze-Fußhebel | 200–450 € |",
-            "| Kleinteile, Füße, Öl | 100–150 € |",
-            f"| **Material und Fremdleistungen** | **ca. {fmt(holz_k + 1050, 0)}–{fmt(holz_k + 2050, 0)} €** |",
-            "| Schreiner-Arbeitszeit, grob 60–90 h (Rundungen, Rolltür, Mechanik – Richtwert) | 4.000–7.000 € |",
-            f"| **Gesamt grob** | **ca. {fmt(holz_k + 5050, 0)}–{fmt(holz_k + 9050, 0)} €** |", "",
-            "Ohne Hanteln (siehe hanteln.md). Preise sind grobe Annahmen und regional sehr verschieden.", ""]
+            f"- Schaumstoff je Polster {po['schaum']} mm: fest (RG 50+) unten, mittel (RG 35–40) oben, Watte darüber",
+            f"- Bezug ca. {fmt(leder, 2)} m² Rindleder Cognac, vollnarbig, pigmentiert oder Semianilin, Kedernaht",
+            "- Bezug und Polster austauschbar: Polsterplatte von unten verschraubt, Leder auf eigenem Spannrahmen oder getackert", "",
+            "## Gewicht", "",
+            f"- Holz {fmt(gw['holz'])} kg, Innenrahmen {fmt(gw['rahmen'])} kg, Mechanik und Hantelaufnahmen {fmt(gw['mechanik'])} kg, "
+            f"Fahrwerk {fmt(gw['fahrwerk'])} kg, Polster und Kleinteile {fmt(gw['schaum'] + gw['rest'])} kg",
+            f"- Bank leer: ca. **{fmt(gw['leer'])} kg**, mit Hanteln und Zubehör ({fmt(inhalt)} kg): ca. **{fmt(gw['leer'] + inhalt)} kg**", "",
+            "## Kosten (Schätzung, getrennt nach Gewerken wie im Vorentwurf)", "",
+            "| Gewerk | Inhalt | Kosten |", "|---|---|---:|",
+            f"| Holzbau | Platten {fmt(gw['flaeche_platte'], 1)} m² furniert + Eiche massiv {fmt(gw['flaeche_massiv'], 1)} m² (ca. {fmt(holz_mat, 0)} €), "
+            "Rundungen, Rolltür, Oberfläche, Montage, grob 50–80 h | 4.000–7.000 € |",
+            "| Polster | Leder, Schaum, Polsterarbeit für 2 Polster | 600–1.000 € |",
+            "| Metallbau und Beschläge | Innenrahmen geschweißt und beschichtet, 2 Gleitstützen mit Indexbolzen, Gelenke, 10 Hantelaufnahmen | 1.500–3.000 € |",
+            "| Fahrwerk | Rollenrahmen, 4 Lenkrollen, Exzenterwellen, Bronze-Pedal | 500–1.200 € |",
+            "| **Gesamt grob** | | **6.600–12.200 €** |",
+            "| Option | Elektrischer Taster mit Spindelantrieb statt Pedal | + 400–900 € |", "",
+            "Ohne Hanteln (siehe hanteln.md). Grobe Annahmen, regional sehr verschieden. "
+            "Das Angebot bitte getrennt nach diesen vier Gewerken anfragen.", ""]
     (ROOT / "docs" / "stueckliste.md").write_text("\n".join(out))
     return inhalt
 
 
 def write_berechnung(p, d, platz, fehlt, belegt, gw, inhalt, rast, pruef):
-    me, last, k, po, ro = p["mechanik"], p["last"], p["korpus"], p["polster"], p["rollen"]
+    me, last, k, po, ro, ra = p["mechanik"], p["last"], p["korpus"], p["polster"], p["rollen"], p["rahmen"]
 
     def ok(w, g):
         return "✅" if w <= g else "⚠️"
 
     out = ["# Berechnung", "",
            "> Automatisch erzeugt aus `params.toml` mit `python3 tools/build.py`. Nicht von Hand ändern.",
-           "> Überschlagsrechnung zur Plausibilisierung, kein Statik-Nachweis.", "",
+           "> Überschlagsrechnung zur Abstimmung. Den Nachweis von Lasten, Verbindungen, Verriegelung und "
+           "Kippsicherheit übernehmen Metallbau bzw. Beschlaglieferant.", "",
            "## Hauptmaße", "",
            f"- Außen: {d['L']} × {d['D']} × {d['H']} mm (L × T × H), Ecken im Grundriss R {d['R']}",
-           f"- Polster {d['pad_b']} mm breit in einer Wanne mit {po['rand']} mm Rand: Rückenlehne {d['lehne_l']} mm, "
-           f"Fuge {po['fuge']} mm, Sitz {po['sitz_laenge']} mm",
-           f"- Rolltür {fmt(d['rt_len'], 0)} mm lang aus {d['rt_n']} Lamellen à {fmt(d['rt_b'])} mm. Offen läuft sie in die "
-           f"Tasche links ({k['tasche']} mm) und hinter den Fächern entlang (Speicherweg {fmt(d['rt_speicher'], 0)} mm "
-           + ("✅)" if d["rt_speicher"] >= d["rt_len"] else "⚠️ zu kurz)"),
-           f"- Fächer: {', '.join(fmt(b_, 0) for b_ in d['fach_breiten'])} mm breit, {fmt(d['fach_tiefe'], 0)} mm tief", ""]
+           f"- Längskette: {po['luft_ende'] + d['t']} + Lehne {fmt(d['lehne_l'], 0)} + Fuge {po['fuge']} + Sitz {po['sitz_laenge']} + {po['luft_ende'] + d['t']} = {d['L']} mm",
+           f"- Polsterbreite {d['pad_b']} mm (Rand {d['t']} + Spalt {po['luft_seite']} je Seite für die Gelenkkonsolen)",
+           f"- Höhe: Sockel {k['sockel_hoehe']} + Korpus {d['korpus_h']} + Polsterpaket {d['polster_h']} = {d['H']} mm",
+           f"- Rolltür {fmt(d['rt_len'], 0)} mm aus {d['rt_n']} Lamellen à {fmt(d['rt_b'])} mm, Speicherweg links und hinten "
+           f"{fmt(d['rt_speicher'], 0)} mm " + ("✅" if d["rt_speicher"] >= d["rt_len"] else "⚠️ zu kurz"),
+           f"- Innenraum: Tasche {k['tasche']} mm, Hantelbereich {fmt(d['fach_breiten'][0], 0)} mm, Zubehör {fmt(d['fach_breiten'][1], 0)} mm, "
+           f"{fmt(d['fach_tiefe'], 0)} mm tief, {d['innen_h']} mm hoch", ""]
 
-    for teil in ("lehne",):
+    for teil in TEILE:
         tl = d["teile"][teil]
-        rs, park, F_last = rast[teil]
+        rs, F_last = rast[teil]
         rfehler, rabst = pruef[teil]
         q = p[teil]
         seite = "linke" if tl["dir"] < 0 else "rechte"
         out += [f"## {NAME[teil]}", "",
-                f"Drehachse an der inneren Kante, {me['achse_unter_oberkante']} mm unter der Polsteroberfläche "
+                f"Gemeinsame Drehachse mit dem anderen Polster in der Mitte der Fuge, {me['achse_unter_oberkante']} mm unter der Polsteroberfläche "
                 f"(x = {fmt(tl['achse_x'], 0)} mm ab linkem Ende). Das {seite} Ende hebt sich. "
-                f"Die Stütze ist {tl['s']} mm von der Achse angelenkt und {tl['l']} mm lang.", "",
+                f"Die Gleitstütze ist {tl['s']} mm von der Achse angelenkt und {tl['l']} mm lang. "
+                f"Ihr Fuß gleitet in einer C-Schiene und wird in jeder Arbeitsstellung von einem federnden Indexbolzen Ø {me['bolzen_d']} "
+                "formschlüssig verriegelt. Flach liegt das Polster auf dem Rahmen, der Gleitschuh steht am Endanschlag "
+                "und wird von einem Kugelschnäpper gegen Abheben gehalten.", "",
                 f"Last: {int(q['last_anteil'] * 100)} % von {last['nutzer_kg']} kg × {last['dynamik']} = {fmt(F_last, 0)} N, "
                 f"{q['last_abstand']} mm von der Achse, senkrecht nach unten oder senkrecht auf das Polster. "
                 "Die Tabelle zeigt den ungünstigeren Fall.", "",
-                "| Stellung | Rast ab Achse | Rast ab linkem Ende | Stützkraft | Achskraft | Neigung Stütze |",
-                "|---|---:|---:|---:|---:|---:|",
-                f"| 0° flach (Parkrast, {fmt(d['park_tiefe'], 0)} mm tief) | {fmt(park, 0)} mm | {fmt(gx(tl, park), 0)} mm | – | – | 0° |"]
+                "| Stellung | Loch / Anschlag ab Achse | ab linkem Ende | Stützkraft | Achskraft | Neigung Stütze |",
+                "|---|---:|---:|---:|---:|---:|"]
         for r in rs:
             if r["ok"]:
                 out.append(f"| {r['winkel']}° | {fmt(r['n'], 0)} mm | {fmt(gx(tl, r['n']), 0)} mm | "
-                           f"{fmt(r['F'], 0)} N | {fmt(r['R'], 0)} N | {fmt(r['neigung'], 0)}° |")
+                           + (f"{fmt(r['F'], 0)} N | {fmt(r['R'], 0)} N |" if r["winkel"] else "– | – |")
+                           + f" {fmt(r['neigung'], 0)}° |")
             else:
-                out.append(f"| {r['winkel']}° | – | – | – | – | Stütze zu kurz |")
+                out.append(f"| {r['winkel']}° | – | – | – | – | nicht erreichbar |")
         F_max = max((r["F"] for r in rs if r["ok"]), default=0)
-        F_cr, sk = knicken(p, teil, d, F_max)
+        F_cr, sk = knicken(p, d, teil, F_max)
+        tau = F_max / 2 / (2 * math.pi * me["bolzen_d"] ** 2 / 4)
         out += ["",
-                f"- Kleinster Abstand zwischen zwei Rasten {fmt(rabst, 0)} mm (Minimum {me['min_rastabstand']} mm).",
+                f"- Kleinster Lochabstand {fmt(rabst, 0)} mm (Minimum {me['loch_abstand_min']} mm). "
+                "Ein eigenes Loch für flach ginge nicht: Es läge nur gut 10 mm neben dem Loch für den kleinsten Winkel.",
                 f"- Knicken der Stütze (2 × Flachstahl {me['bein_breite']} × {me['bein_dicke']}): "
                 f"Knicklast {fmt(F_cr / 1000, 1)} kN bei max. {fmt(F_max / 1000, 2)} kN → Sicherheit ≈ {fmt(sk, 1)}.",
-                f"- Achskraft auf zwei Bolzen M10: Scherspannung ≈ {fmt(max((r['R'] for r in rs if r['ok']), default=0) / 2 / (math.pi * 25), 0)} N/mm² (zulässig > 100 N/mm²).",
+                f"- Indexbolzen Ø {me['bolzen_d']}, je Bein zweischnittig: Scherspannung ≈ {fmt(tau, 0)} N/mm² (Stahl zulässig > 100 N/mm²).",
                 "", ("**⚠️ Geometrie prüfen:** " + "; ".join(rfehler)) if rfehler
-                else "✅ Alle Rasten liegen auf der Leiste und haben genug Abstand.", ""]
-    out += ["Bei steilen Stellungen zieht die Achse nach oben. Die Gelenkplatten werden deshalb mit durchgehenden "
-            "Schrauben auf eine Stahl-Gegenplatte unter dem Deckel geschraubt.", ""]
-    tl, q = d["teile"]["sitz"], p["sitz"]
-    stufen, gelenk, F_last, sfehler = rast["sitz"]
-    out += ["## Sitz", "",
-            f"Drehachse an der inneren Kante (x = {fmt(tl['achse_x'], 0)} mm ab linkem Ende), {p['mechanik']['achse_unter_oberkante']} mm "
-            "unter der Polsteroberfläche. Das rechte Ende hebt sich, damit man auf der Schrägbank nicht nach vorn rutscht. "
-            "Getragen wird der Sitz von Klappbügeln aus Stahl, einer je Stellung, ineinander geschachtelt. "
-            "Der benutzte Bügel wird hochgeklappt und steht senkrecht, die anderen liegen flach in der Wanne.", "",
-            f"Last: {int(q['last_anteil'] * 100)} % von {last['nutzer_kg']} kg × {last['dynamik']} = {fmt(F_last, 0)} N, "
-            f"{q['last_abstand']} mm von der Achse, senkrecht auf das Polster.", "",
-            "| Stellung | Bügel ab Achse | Bügelhöhe über Deckel | Kraft auf den Bügel | Achskraft |",
-            "|---|---:|---:|---:|---:|",
-            "| 0° flach | – | alle Bügel liegen flach | – | – |"]
-    for s_ in stufen:
-        out.append(f"| {s_['winkel']}° | {fmt(s_['u'], 0)} mm | {fmt(s_['h'], 0)} mm | {fmt(s_['F'], 0)} N | {fmt(s_['R'], 0)} N |")
-    out += ["", ("**⚠️ Geometrie prüfen:** " + "; ".join(sfehler)) if sfehler
-            else "✅ Die Bügel passen umgeklappt unter den Sitz.", ""]
+                else "✅ Alle Löcher liegen auf der Schiene und haben genug Abstand.", ""]
 
-    out += ["## Stauraum-Belegung", "",
-            "Schwerste Teile zuerst, untere Ebene zuerst. Die Hanteln liegen auf einer schwarzen Ablage.", "",
-            "| Zelle | Inhalt | Breite | Höhe | Tiefe | kg |", "|---|---|---:|---:|---:|---:|"]
-    for i in sorted(platz, key=lambda i: (i["fach"], i["ebene"] == "oben")):
+    spiel, al, as_ = fuge_pruefen(p, d)
+    out += ["## Fuge zwischen Lehne und Sitz", "",
+            f"Lehne und Sitz drehen um eine gemeinsame Achse in der Fugenmitte, {me['achse_unter_oberkante']} mm unter der Oberfläche. "
+            f"Die Polsterkanten sind mit R {po['radius']} gerundet und wandern beim Anstellen nur wenig in die Fuge. Kleinster Abstand über alle Stellungen: "
+            f"**{fmt(spiel, 1)} mm** (Lehne {al}°, Sitz {as_}°, Fuge {po['fuge']} mm). "
+            + ("✅" if spiel >= me["min_spiel"] else f"⚠️ weniger als {me['min_spiel']} mm"), "",
+            "Mit einer Achse unten am Polster, wie in der Funktionsskizze des Vorentwurfs angedeutet, würden die oberen Kanten "
+            f"bei 60° rund {fmt(d['polster_h'] * math.sin(math.radians(60)), 0)} mm in die Fuge wandern. "
+            "Deshalb sitzt die Achse oben, getragen von schmalen Konsolen im Spalt neben den Polstern. "
+            "Zwei getrennte Achsen gingen bei so kleiner Fuge nicht: Zwei Bolzen M10 brauchen mehr als 16 mm Abstand.", ""]
+
+    out += ["## Stauraum", "",
+            "Hanteln einzeln in Aufnahmen auf Stahltraversen zwischen den Rahmenstützen, schwerste unten. Zubehör im Zubehörbereich; was in der Tiefe an die Stützen reicht, liegt daneben (die Matte quer).", "",
+            "| Bereich | Inhalt | Breite | Höhe | Tiefe | kg |", "|---|---|---:|---:|---:|---:|"]
+    for i in sorted(platz, key=lambda i: (i["fach"], i["ebene"] == "oben", i["x"])):
         out.append(f"| {i['zelle']} | {i['name']} | {fmt(i['w'], 0)} | {fmt(i['h'], 0)} | {fmt(i['d'], 0)} | {fmt(i['kg'])} |")
-    out += ["", "| Zelle | lichte Höhe | belegt / verfügbar (Breite) | davon vorn offen |", "|---|---:|---:|---:|"]
+    out += ["", "| Bereich | lichte Höhe | belegt / verfügbar (Breite) | davon vorn offen |", "|---|---:|---:|---:|"]
     for z in sorted(d["zellen"], key=lambda z: (z["fach"], z["ebene"] == "oben")):
         out.append(f"| {z['name']} | {fmt(z['zugang'], 0)} mm | {fmt(belegt[z['name']], 0)} / {fmt(z['breite'], 0)} mm | {fmt(z['offen'], 0)} mm |")
     out += ["", ("**⚠️ Passt nicht:** " + ", ".join(i["name"] for i in fehlt)) if fehlt
-            else "✅ Alles Inventar findet Platz."]
+            else "✅ Alle 10 Hanteln und das Zubehör finden Platz.",
+            "", "Die Breiten gelten für die selbstgebauten Hanteln aus [hanteln.md](hanteln.md). "
+            "Vor der Fertigung werden die fertigen Hanteln vermessen und die Aufnahmen danach gesetzt.", ""]
 
-    out += ["", "## Durchbiegung", "",
-            f"Lastannahme: {last['nutzer_kg']} kg Nutzer × Stoßfaktor {last['dynamik']}.", "",
+    out += ["## Durchbiegung", "",
+            f"Lastannahme: {last['nutzer_kg']} kg Nutzer × Stoßfaktor {last['dynamik']}. Die Lasten laufen über den Innenrahmen "
+            "direkt in die Füße, die Holzverkleidung trägt nicht mit.", "",
             "| Bauteil | Last | Stützweite | Durchbiegung | Grenze L/300 | |",
             "|---|---:|---:|---:|---:|---|"]
     for name, F, l, w in statik(p, d, platz, rast):
         out.append(f"| {name} | {fmt(F, 0)} N | {fmt(l, 0)} mm | {fmt(w, 2)} mm | {fmt(l / 300, 2)} mm | {ok(w, l / 300)} |")
-    out += ["", "Die verleimte Rückwand trägt die Hinterkante des Deckels zusätzlich mit. Sie ist hier nicht angesetzt.", ""]
+    out.append("")
 
-    fe, fd = k["fuss_einzug"], k["fuss_d"]
-    stand = fe - fd / 2                      # äußere Kante der Füße
-    ueber_y = max(stand - d["pad_y0"], 1)
-    ueber_x = max(stand - d["lehne_x0"], 1)
+    fx = [f_[0] for f_ in d["fuss_pos"]]
+    fy = [f_[1] for f_ in d["fuss_pos"]]
+    r_f = k["fuss_d"] / 2
+    x_l, x_r = min(fx) - r_f, max(fx) + r_f
+    y_v, y_h = min(fy) - r_f, max(fy) + r_f
     out += ["## Kippsicherheit", "",
-            f"Die Bank steht auf 4 Füßen, deren Außenkante {fmt(stand, 0)} mm hinter der Korpuskante liegt. "
-            f"Das Polster beginnt {d['pad_y0']} mm hinter der Kante.", "",
-            "| Fall | leer | mit Inventar |", "|---|---:|---:|"]
-    for label, hebel, ueber in (("Längskante", d["D"] / 2 - stand, ueber_y), ("Stirnkante", d["L"] / 2 - stand, ueber_x)):
-        werte = [w * hebel / ueber for w in (gw["leer"], gw["leer"] + inhalt)]
-        txt = ["> 1.000 kg (kippt praktisch nicht)" if w_ > 1000 else f"{fmt(w_, 0)} kg" for w_ in werte]
-        out.append(f"| Senkrechte Last auf der {label}, ab der die Bank kippt | {txt[0]} | {txt[1]} |")
+            f"Die Füße sitzen unter den Eckstützen des Innenrahmens. Standfläche x = {fmt(x_l, 0)}…{fmt(x_r, 0)} mm, "
+            f"y = {fmt(y_v, 0)}…{fmt(y_h, 0)} mm.", "",
+            "| Fall | leer | mit Hanteln |", "|---|---:|---:|"]
+    W = [gw["leer"], gw["leer"] + inhalt]
+    for label, hebel, ueber in (("an der Längskante", d["D"] / 2 - y_v, d["pad_y0"] - y_v),
+                                ("am linken Lehnenende", d["L"] / 2 - x_l, x_l - d["lehne_x0"]),
+                                ("am rechten Sitzende", x_r - d["L"] / 2, d["sitz_x1"] - x_r)):
+        if ueber <= 0:
+            out.append(f"| Senkrechte Last {label} | liegt innerhalb der Standfläche | kippt nicht |")
+        else:
+            w_ = [w * hebel / ueber for w in W]
+            out.append(f"| Senkrechte Last {label}, ab der die Bank kippt | {fmt(w_[0], 0)} kg | {fmt(w_[1], 0)} kg |")
     lb = d["teile"]["lehne"]
-    a_max = math.radians(max(lb["winkel"]))
-    h_top = d["achse_z"] + lb["laenge"] * math.sin(a_max)
-    hebel = d["L"] / 2 - stand
-    kipp = [w * G * hebel / h_top for w in (gw["leer"], gw["leer"] + inhalt)]
+    h_top = d["achse_z"] + lb["laenge"] * math.sin(math.radians(max(lb["winkel"])))
+    kipp = [w * G * (d["L"] / 2 - x_l) / h_top for w in W]
     out.append(f"| Lehne {max(lb['winkel'])}°: waagerechter Druck nach hinten an der Lehnenoberkante ({fmt(h_top, 0)} mm hoch), niemand sitzt | "
                f"{fmt(kipp[0], 0)} N | {fmt(kipp[1], 0)} N |")
-    mit_person = kipp[0] + last["nutzer_kg"] * G * ((d["sitz_x0"] + d["sitz_x1"]) / 2 - stand) / h_top
-    out += ["",
-            f"Sitzt jemand auf dem Sitz, steigt der letzte Wert (leere Bank) auf ≈ {fmt(mit_person, 0)} N. "
-            "Beim Training ist das unkritisch. Die aufgestellte Lehne ist aber kein Griff zum Hochziehen, "
-            "wenn die Bank leer ist.", ""]
-    kraft = [(w * G * ro["hub"] / ro["pedalweg"] * 1.3) for w in (gw["leer"], gw["leer"] + inhalt)]
-    out += ["## Absenkrollen: vom Bett abrücken", "",
-            f"- {ro['anzahl']} lenkbare Doppelrollen Ø {ro['durchmesser']} mm sitzen verdeckt im Sockel. Eine Exzenterwelle hebt sie gemeinsam.",
-            f"- Bronze-Fußhebel vorn rechts nach unten treten: Die Rollen fahren {ro['hub']} mm unter die Füße, und die Bank rollt in jede Richtung.",
-            "  Hebel mit der Fußspitze hochziehen: Die Bank steht wieder fest auf den Füßen. Der Hebel rastet in beiden Lagen über den Totpunkt.",
-            f"- Fußkraft am Hebel (≈ {ro['pedalweg']} mm Weg, mit Reibung): leer ≈ {fmt(kraft[0] / G, 0)} kg, mit Inventar ≈ {fmt(kraft[1] / G, 0)} kg.",
-            "- Zum Training die Bank ca. 60 cm vom Bett wegrollen: Beim Drücken und bei Fliegenden gehen die Ellbogen unter Polsterhöhe, "
-            "und auf der Schrägbank steht ein Fuß neben der Bank. Vor dem Training die Rollen hochstellen.",
-            "- Die Rollen sind für glatte Böden (Parkett, Fliesen) gedacht.", ""]
+    out += ["", f"Zum Vergleich: {last['nutzer_kg']} kg × {last['dynamik']} = {fmt(last['nutzer_kg'] * last['dynamik'], 0)} kg. "
+            "Step-ups oder Aufstützen genau am Lehnenende sind damit abgedeckt; die Lehne ist aber kein Griff zum Hochziehen.", ""]
+
+    kraft = [w * G * ro["hub"] / ro["pedalweg"] * 1.3 for w in W]
+    out += ["## Fahrwerk", "",
+            f"- Trainieren: Die Bank steht auf 4 Stellfüßen an den Eckstützen. Die {ro['anzahl']} Lenkrollen Ø {ro['durchmesser']} haben Bodenfreiheit.",
+            f"- Rollen: Bronze-Pedal rechts im Sockel treten. Zwei gekoppelte Exzenterwellen senken den geführten Rollenrahmen ab und heben die Füße {ro['hub']} mm an.",
+            f"- Pedalkraft (≈ {ro['pedalweg']} mm Weg, mit Reibung): leer ≈ {fmt(kraft[0] / G, 0)} kg, mit Hanteln ≈ {fmt(kraft[1] / G, 0)} kg.",
+            "- Transportstellung über Totpunkt verriegelt. Beim Verschieben: Polster flach, Rolltür zu, niemand auf der Bank.",
+            "- Option: elektrischer Taster mit Spindelantrieb statt Pedal.", ""]
     (ROOT / "docs" / "berechnung.md").write_text("\n".join(out))
 
 
@@ -683,12 +684,12 @@ def write_hanteln(p, hs, m_griff):
     out = ["# Hanteln", "",
            "> Automatisch erzeugt aus `params.toml` mit `python3 tools/build.py`. Nicht von Hand ändern.", "",
            "Fünf Paar Kurzhanteln, passend zur Bank: schwarze Stahlköpfe, Griff aus Eiche. "
-           "Die Maße sind so gewählt, dass jedes Paar genau in sein Fach passt "
-           "(Belegung siehe [berechnung.md](berechnung.md)).", "",
+           "In der Bank hängt jede Hantel einzeln in einer gepolsterten Aufnahme am Griff, gesichert mit einem Bügel "
+           "(Belegung siehe [berechnung.md](berechnung.md)). Die freie Grifflänge zwischen den Auflagen bleibt frei.", "",
            "![Hantel](zeichnungen/hantel.svg)", "",
            "## Aufbau", "",
            f"- **Köpfe:** Rundstahl S235, gedreht. Fase {h['fase']} × 45° an allen Kanten, zentrisches Sackloch M16 × {h['gewinde_tiefe']} mm"
-           + (f", {ab} mm tiefe Abflachung. Mit ihr rollt die Hantel nicht weg und liegt stabil auf der Ablage." if ab else "."),
+           + (f", {ab} mm tiefe Abflachung. Mit ihr rollt die Hantel auf dem Boden nicht weg." if ab else "."),
            f"- **Kern:** Gewindestange M16, Festigkeitsklasse 8.8. Sie hält beide Köpfe, die Eichenhülse wird dazwischen geklemmt.",
            f"- **Griff:** Eiche gedreht, Ø {h['griff_d']} mm, Bohrung 16,5 mm, Länge {h['griff_laenge']} mm. "
            "Optional mit feinen Längsrillen wie die Lamellen der Bank, das gibt Grip.",
@@ -732,17 +733,18 @@ def write_hanteln(p, hs, m_griff):
     (ROOT / "docs" / "hanteln.md").write_text("\n".join(out))
 
 
+
 ANSICHTEN = [
     # Datei, Kamera (tx,ty,tz,rx,ry,rz,dist), Projektion, -D Optionen
-    ("moebel.png", "700,215,230,72,0,22,2850", "p", {}),
-    ("training.png", "700,215,330,70,0,22,3300", "p",
-     {"lehne_winkel": "30", "sitz_winkel": "20", "rolltuer_offen": "true"}),
-    ("schraeg.png", "700,215,480,70,0,22,3700", "p", {"lehne_winkel": "45"}),
-    ("verstellung.png", "700,0,760,90,0,0,3300", "o",
-     {"lehne_winkel": "45", "sitz_winkel": "10", "geist": "true", "zeige_inhalt": "false"}),
-    ("stauraum.png", "700,215,230,72,0,22,2850", "p", {"rolltuer_offen": "true"}),
-    ("explosion.png", "700,215,320,66,0,22,3800", "p", {"explosion": "1"}),
-    ("moebel_nussbaum.png", "700,215,230,72,0,22,2850", "p", {"farbschema": '"nussbaum"'}),
+    ("moebel.png", "600,215,230,72,0,22,2500", "p", {}),
+    ("training.png", "600,215,420,68,0,22,3300", "p",
+     {"lehne_winkel": "45", "sitz_winkel": "15", "rolltuer_offen": "true"}),
+    ("verstellung.png", "600,0,650,90,0,0,2800", "o",
+     {"lehne_winkel": "45", "sitz_winkel": "15", "geist": "true", "zeige_inhalt": "false"}),
+    ("stauraum.png", "600,215,230,72,0,22,2500", "p", {"rolltuer_offen": "true"}),
+    ("tragwerk.png", "600,215,250,68,0,22,2700", "p",
+     {"zeige_holz": "false", "lehne_winkel": "30", "sitz_winkel": "10"}),
+    ("explosion.png", "600,215,320,66,0,22,3300", "p", {"explosion": "1"}),
 ]
 
 
@@ -765,20 +767,21 @@ def render():
         print(f"  renders/{datei}")
 
 
+
+
 def main():
     p = load_params()
     d = derive(p)
     if "--stuetze-suchen" in sys.argv:
         suche_stuetze(p, d)
         return
-    rast = {"lehne": rasten(p, d, "lehne"), "sitz": bock(p, d)}
-    pruef = {"lehne": pruefe_rasten(p, d, "lehne", rast["lehne"][0], rast["lehne"][1]),
-             "sitz": (rast["sitz"][3], None)}
+    rast = {teil: rasten(p, d, teil) for teil in TEILE}
+    pruef = {teil: pruefe_rasten(p, d, teil, rast[teil][0]) for teil in TEILE}
     hs, m_griff = hanteln(p)
     platz, fehlt, belegt = pack(p, d, hs)
     write_scad(p, d, platz, rast)
-    gw = gewicht(p, d)
-    inhalt = write_stueckliste(p, d, teile(p, d), platz, gw)
+    gw = gewicht(p, d, platz)
+    inhalt = write_stueckliste(p, d, teile(p, d, platz), platz, gw)
     write_berechnung(p, d, platz, fehlt, belegt, gw, inhalt, rast, pruef)
     write_hanteln(p, hs, m_griff)
     zeichnungen.erzeuge(ROOT / "docs" / "zeichnungen", p, d, rast, hs)
@@ -786,6 +789,9 @@ def main():
     for teil in TEILE:
         for w in pruef[teil][0]:
             print(f"WARNUNG {NAME[teil]}:", w)
+    spiel = fuge_pruefen(p, d)[0]
+    if spiel < p["mechanik"]["min_spiel"]:
+        print(f"WARNUNG Fuge: nur {spiel:.1f} mm Abstand zwischen den Polsterkanten")
     if fehlt:
         print("WARNUNG – passt nicht in den Stauraum:", ", ".join(i["name"] for i in fehlt))
     if "--no-render" not in sys.argv:

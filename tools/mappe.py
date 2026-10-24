@@ -42,7 +42,7 @@ const { chromium } = require('playwright');
   await p.pdf({ path: process.argv[3], format: 'A4', printBackground: true,
                 displayHeaderFooter: true, headerTemplate: '<span></span>',
                 footerTemplate: '<div style="font-size:8px;width:100%;text-align:center;color:#888">'
-                  + 'Sitz- und Trainingsbank – Unterlagen für den Schreiner – Seite <span class="pageNumber"></span>/<span class="totalPages"></span></div>',
+                  + 'Wohnbank mit Trainingsfunktion – Unterlagen für den Schreiner – Seite <span class="pageNumber"></span>/<span class="totalPages"></span></div>',
                 margin: { top: '14mm', bottom: '16mm', left: '14mm', right: '14mm' } });
   await b.close();
 })();
@@ -57,7 +57,7 @@ def html_aus(md_datei):
     html = re.sub(r'src="([^"]+)"', lambda m: f'src="file://{(DOCS / m.group(1)).resolve()}"', html)
     html = re.sub(r'<a href="[^"]+\.md">([^<]+)</a>', r"\1", html)
     # Zeichnungen und Ansichten jeweils auf neuer Seite
-    html = re.sub(r"<h3>(Querschnitt|Rastleisten|Metallteile|Verstellbereich)", r'<h3 class="umbruch">\1', html)
+    html = re.sub(r"<h3>(Querschnitt|Gleitschienen|Metallteile|Tragwerk|Training)", r'<h3 class="umbruch">\1', html)
     html = html.replace("<h2>Konstruktionsvorgaben</h2>", '<h2 class="umbruch">Konstruktionsvorgaben</h2>')
     return html
 

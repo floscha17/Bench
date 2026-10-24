@@ -2,13 +2,13 @@
 
 > Automatisch erzeugt aus `params.toml` mit `python3 tools/build.py`. Nicht von Hand ändern.
 
-Fünf Paar Kurzhanteln, passend zur Bank: schwarze Stahlköpfe, Griff aus Eiche. Die Maße sind so gewählt, dass jedes Paar genau in sein Fach passt (Belegung siehe [berechnung.md](berechnung.md)).
+Fünf Paar Kurzhanteln, passend zur Bank: schwarze Stahlköpfe, Griff aus Eiche. In der Bank hängt jede Hantel einzeln in einer gepolsterten Aufnahme am Griff, gesichert mit einem Bügel (Belegung siehe [berechnung.md](berechnung.md)). Die freie Grifflänge zwischen den Auflagen bleibt frei.
 
 ![Hantel](zeichnungen/hantel.svg)
 
 ## Aufbau
 
-- **Köpfe:** Rundstahl S235, gedreht. Fase 3 × 45° an allen Kanten, zentrisches Sackloch M16 × 25 mm, 4 mm tiefe Abflachung. Mit ihr rollt die Hantel nicht weg und liegt stabil auf der Ablage.
+- **Köpfe:** Rundstahl S235, gedreht. Fase 3 × 45° an allen Kanten, zentrisches Sackloch M16 × 25 mm, 4 mm tiefe Abflachung. Mit ihr rollt die Hantel auf dem Boden nicht weg.
 - **Kern:** Gewindestange M16, Festigkeitsklasse 8.8. Sie hält beide Köpfe, die Eichenhülse wird dazwischen geklemmt.
 - **Griff:** Eiche gedreht, Ø 32 mm, Bohrung 16,5 mm, Länge 125 mm. Optional mit feinen Längsrillen wie die Lamellen der Bank, das gibt Grip.
 - **Oberfläche:** Köpfe brüniert und gewachst (Patina gewollt) oder matt schwarz pulverbeschichtet. Griff geölt.

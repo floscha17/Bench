@@ -1,56 +1,63 @@
-# Konzept: Bank am Bettende, die zur Flach- und Schrägbank wird
+# Konzept: Wohnbank mit Trainingsfunktion
 
 ## Die Idee
 
-Ein hochwertiges Möbelstück aus massiver Eiche und Cognac-Leder für das Ende eines 180-cm-Betts.
-Im Alltag ist es eine Sitzbank. Zum Training nimmt man die selbstgebauten Hanteln heraus, rollt die Bank vom Bett weg und nutzt sie flach oder als Schrägbank:
-die Rückenlehne von 25° bis 85°, den Sitz zusätzlich um 10° oder 20° geneigt.
+Ein hochwertiges Möbel aus Eiche und Cognac-Leder für das Ende eines 180-cm-Betts.
+Im Alltag ist es eine Sitzbank. Zum Training nimmt man die selbstgebauten Hanteln heraus, rollt die Bank vom Bett weg und stellt die Polster an:
+die Rückenlehne auf 15°, 30°, 45° oder 60°, den Sitz auf 10° oder 15°.
 
-## Bildentwurf und Umsetzung
+## Entwicklung: Bildentwurf → Studio-Vorentwurf → Modell
 
-![Bildentwurf](bildentwurf.png)
-
-| Bildentwurf | Umsetzung im Modell | |
-|---|---|---|
-| Gerundete senkrechte Korpusecken | Ecken R 70 aus massiven Eichen-Eckstollen, Faser senkrecht | ✓ |
-| Lamellenfront, die links in eine Tasche läuft | Rolltür aus 65 gerundeten Eichenlamellen auf Leinen. Offen läuft sie in die Tasche links und hinter den Fächern entlang | ✓ |
-| Polster in einer Holzwanne mit sichtbarer Eichenkante | 20 mm hoher Rand, Polsterplatte mit Eichenkante, Leder darüber | ✓ |
-| Lange Lehne links, kurzer Sitz rechts, beide neigbar | Lehne 893 mm (25°–85°), Sitz 400 mm (0°, 10°, 20°) | ✓ |
-| Schwarze Stahlstützen | Sitz: Klappbügel am Ende wie im Bild. Lehne: Klappstütze **unter der Lehnenmitte**, weil eine Stütze am Ende 85° nicht erreicht und sich nicht flach wegklappen lässt | angepasst |
-| Hanteln auf schwarzer Ablage | schwarze Ablage unter jedem Kopf | ✓ |
-| 4 Sechskanthanteln in einer Reihe | 5 Paar runde Hanteln (deine Wahl) auf 2 Ebenen. In eine Reihe passen sie nicht | angepasst |
-| Ein großes Mittelfach | Zwei Hantelfächer. Ein durchgehendes Fach wäre für Deckel und Fachboden zu weit gespannt | angepasst |
-| Zubehörfach rechts | Fach rechts mit Fachboden für Bänder und Manschetten | ✓ |
-| Eichensockel mit schwarzen Füßen | Sockelzarge zurückgesetzt, Ecken gerundet, 4 schwarze Füße | ✓ |
-| Bronze-Element vorn rechts | Fußhebel für die verdeckten Absenkrollen | ✓ |
+1. **[Bildentwurf](bildentwurf.png):** Gestaltung mit gerundeten Ecken, Lamellenfront, Polsterwanne, schwarzen Stützen und Bronze-Akzent.
+2. **[Studio-Vorentwurf V01](vorentwurf-studio.pdf)** (24.10.2026): legt Maße, Verstellbereiche, Tragprinzip, Rollfront, Hantelaufnahmen und Fahrwerk fest. Besprechungsgrundlage, keine Fertigungsfreigabe.
+3. **Dieses Modell:** setzt den Vorentwurf parametrisch um und rechnet nach, ob Mechanik, Stauraum, Durchbiegung und Kippsicherheit aufgehen.
 
 | Möbel | Training |
 |---|---|
 | ![Bank als Möbel](../renders/moebel.png) | ![Training](../renders/training.png) |
+
+### Was aus dem Vorentwurf übernommen ist und wo das Modell abweicht
+
+| Vorentwurf | Umsetzung im Modell | |
+|---|---|---|
+| Außen 1200 × 430 × 460, Sockel 70 + Korpus 320 + Polster 70 | 1200 × 430 × **450**: Sockel 70 + Korpus **310** + Polster 70. 450 mm ist die Obergrenze der Wettkampfnorm für Flachbänke (deine Wahl) | angepasst |
+| Lehne 0/15/30/45/60°, Sitz 0/10/15° | genau so | ✓ |
+| Polster 820 + 10 Fuge + 330, Rand je 20 | 810 + **16** + 330, Rand 19 + 3 Luft. Die Fuge muss die gemeinsame Drehachse aufnehmen, siehe unten | angepasst |
+| Polsterbreite 390 | **368**: Vorn und hinten bleibt je ein 12-mm-Spalt für Gelenkkonsolen und Laschen. Technogym Bench: 376 | angepasst, Liegeprobe |
+| Beide Träger an einem gemeinsamen inneren Metallrahmen | Innenrahmen aus Rechteckrohr: 2 Längsrohre in der Wanne, 6 Stützen, Querrohre, 4 Hanteltraversen, Stellfüße an den Eckstützen | ✓ |
+| Quer abgestützte, formschlüssig verriegelnde Beschläge statt Möbelklappenstütze | Je Polster eine Gleitstütze aus 2 Flachstahlbeinen mit Quersteg. Ihr Fuß läuft in C-Schienen, ein federnder Indexbolzen Ø 10 rastet in jeder Arbeitsstellung ein | ✓ |
+| Drehpunkt in der Funktionsskizze unten am Polster | Gemeinsame Achse **oben**, 12 mm unter der Oberfläche. Mit der Achse unten würden die Polsterkanten bei 60° rund 61 mm in die Fuge wandern | abweichend |
+| – | Flachstellung über Endanschlag + Kugelschnäpper statt eigenem Rastloch. Ein Loch für flach läge nur gut 10 mm neben dem 15°-Loch | Detail |
+| Rollfront nach links um die Ecke, Rücklaufkanal hinten | Tasche links 100 mm, Laufnuten mit mindestens R 50, Rücklauf hinter dem Nutzraum. Speicherweg 1.331 mm für eine 1.060 mm lange Tür | ✓ |
+| Hanteln einzeln, gepolstert, verriegelbar, an Metalltraversen | 10 Einzelaufnahmen auf 4 Flachstahltraversen in 2 Ebenen, schwere unten, lösbarer Sicherungsbügel | ✓ |
+| Rollenrahmen, 4 Lenkrollen, versenktes Fußpedal rechts, 5–10 mm Fußfreiheit | 2 gekoppelte Exzenterwellen, Hub 8 mm, Totpunktrast in beiden Lagen, Bronze-Pedal | ✓ |
+| Formstabile Plattenkonstruktion mit Eichenoberfläche | Furnierte Platten 19 mm, Rundungen formverleimt, Lamellen, Frontleisten und Kanten Eiche massiv | ✓ |
+| Angebot getrennt nach Holzbau, Polster, Metallbau/Beschlägen, Fahrwerk | [Stückliste](stueckliste.md) und Kosten genau so gegliedert | ✓ |
+| Vor der Fertigung klären (6 Punkte), Spindelantrieb als Option | in die [Schreiner-Unterlagen](schreiner.md) übernommen, Spindel als Kostenoption | ✓ |
 
 ## Macht das Sinn? Ja.
 
 | | Bank am Bettende | Trainingsbank | Technogym Bench | **Dieser Entwurf** |
 |---|---|---|---|---|
 | Höhe | 42–48 cm, unter der Matratzenoberkante | 42–45 cm (Wettkampfnorm IPF) | 45,5 cm | **45 cm** |
-| Länge | Bettbreite minus 20–40 cm | 110–125 cm | 112,9 cm | **140 cm** |
-| Polsterbreite | 35–45 cm | 26–32 cm | 37,6 cm | **35,8 cm** |
-| Sitz / Lehne | – | ca. 30–40 / 75–95 cm | – | **40 / 89,3 cm** |
+| Länge | ca. ⅔ bis ¾ der Bettbreite (bei 180 cm: 120–135 cm) | 110–125 cm | 112,9 cm | **120 cm** |
+| Polsterbreite | 35–45 cm | 26–32 cm | 37,6 cm | **36,8 cm** |
+| Sitz / Lehne | – | ca. 30–40 / 75–95 cm | – | **33 / 81 cm** |
 
-- **Ein Kasten ist steifer als ein Gestell.** Mantel, Deckel, Boden, drei Trennwände und die verleimte Rückwand bilden eine geschlossene Box ([berechnung.md](berechnung.md)).
-- **Die Bank kippt praktisch nicht.** Die Füße stehen fast unter der Polsterkante.
-- **Das Gewicht hilft.** Leer wiegt die Bank etwa 65 kg, mit Hanteln etwa 129 kg. Sie wandert beim Training nicht.
+- **Der Stahlrahmen trägt, das Holz verkleidet.** Polster, Hanteln und Füße hängen am Innenrahmen. Die Verkleidung bleibt frei von Trainingslasten und kann als ruhige Plattenkonstruktion gebaut werden ([berechnung.md](berechnung.md)).
+- **Die Bank kippt praktisch nicht.** Erst ab rund 314 kg senkrecht auf dem äußersten Lehnenende würde sie leer kippen, mit Hanteln ab rund 600 kg.
+- **Das Gewicht hilft.** Leer wiegt die Bank etwa 71 kg, mit Hanteln und Zubehör etwa 135 kg. Sie wandert beim Training nicht.
 - **Der Stauraum löst das eigentliche Problem.** Im Schlafzimmer liegen keine Hanteln herum.
 
 ## Am Bettende
 
 | Thema | Lösung |
 |---|---|
-| Länge | 140 cm bei einem 180-cm-Bett, also je Seite 20 cm Luft |
+| Länge | 120 cm bei einem 180-cm-Bett, also je Seite 30 cm Luft |
 | Höhe | 45 cm, unter der üblichen Matratzenoberkante (50–65 cm) |
-| Ausrichtung | Rolltür zum Raum, Rückseite zum Bett. Die Rückwand ist furniert, weil man sie vom Bett aus sieht |
-| Zum Training abrücken | Bronze-Fußhebel treten: Vier verdeckte Rollen fahren aus, und die Bank rollt ca. 60 cm vom Bett weg. Hebel hochziehen, dann steht sie wieder fest. Den Platz braucht man, weil die Ellbogen beim Drücken unter Polsterhöhe gehen und auf der Schrägbank ein Fuß neben der Bank steht |
-| Boden | Die Rollen sind für Parkett und Fliesen gedacht |
+| Ausrichtung | Rollfront zum Raum, Rückseite zum Bett. Die Rückwand ist furniert, weil man sie vom Bett aus sieht, und bekommt eine Wartungsöffnung |
+| Zum Training abrücken | Bronze-Pedal rechts im Sockel treten: Der Rollenrahmen senkt sich, die Füße heben 8 mm ab, die Bank rollt ca. 60 cm vom Bett weg. Pedal zurück, dann steht sie wieder auf den Füßen. Den Platz braucht man, weil die Ellbogen beim Drücken unter Polsterhöhe gehen und auf der Schrägbank ein Fuß neben der Bank steht |
+| Beim Verschieben | Polster flach, Rollfront zu, niemand auf der Bank |
 
 ## Leder: die hochwertigste Wahl, aber die richtige Sorte
 
@@ -64,6 +71,7 @@ Echtes Leder ist das hochwertigste Polstermaterial. Bei einer Trainingsbank komm
 | **Pigmentiertes Vollnarbenleder** | gleichmäßige Farbe, matt | ✓ am robustesten, abwischbar, farbstabil |
 
 **Empfehlung:** vollnarbiges Rindleder in Cognac, pigmentiert oder Semianilin mit Schutzfinish, 1,2–1,5 mm, mit Kedernaht. Nach dem Training feucht abwischen, zweimal im Jahr pflegen.
+Bezug und Polster werden austauschbar gebaut (Wunsch aus dem Vorentwurf).
 
 ## Mechanik
 
@@ -71,72 +79,76 @@ Echtes Leder ist das hochwertigste Polstermaterial. Bei einer Trainingsbank komm
 
 | Lehne | Sitz | Wofür |
 |---|---|---|
-| 0° | 0° | Sitzbank, Kurzhantel-Bankdrücken, Rudern, Hip Thrust |
-| 25° / 35° | 10° | Schrägbankdrücken (obere Brust), Fliegende schräg |
-| 45° | 10° / 20° | steiles Schrägbankdrücken, Incline Curls |
-| 60° / 75° | 20° | Schulterdrücken mit Schräge |
-| 85° | 20° | Schulterdrücken sitzend, Curls mit Rückenlehne |
+| 0° | 0° | Sitzbank, Kurzhantel-Bankdrücken, Rudern einarmig, Hip Thrust |
+| 15° / 30° | 10° | Schrägbankdrücken (obere Brust), Fliegende schräg |
+| 45° | 10° / 15° | steiles Schrägbankdrücken, Incline Curls |
+| 60° | 15° | Schulterdrücken mit leichter Rücklage, Curls mit Rückenlehne |
 
-**Drehachsen:** Lehne und Sitz drehen um je eine Achse an ihrer inneren Kante, 25 mm unter der Polsteroberfläche.
-Weil die Achsen fast auf Sitzhöhe liegen, bleibt die Fuge zwischen den Polstern in jeder Stellung klein.
-Beide Achsen sitzen in einer gemeinsamen schmalen Stahlplatte vorn und hinten im Spalt zwischen Polster und Rand.
+Für Schulterdrücken ganz aufrecht (80–90°) ist die Bank nicht ausgelegt. Das entspricht dem Verstellbereich des Vorentwurfs.
 
-**Rückenlehne:** Unter der Lehne hängt eine U-förmige Klappstütze aus Flachstahl. Ihr Querstab rastet in zwei schwarzen Eichenleisten in der Wanne.
-Bei flacher Lehne liegt die Stütze zusammengeklappt in der Wanne, der Querstab in einer tieferen Parkrast.
-Zum Verstellen die Lehne am linken Ende anheben, den Querstab in die gewünschte Rast setzen und die Lehne ablegen.
+**Drehachse:** Lehne und Sitz drehen um eine gemeinsame Achse M10 in der Mitte der 16-mm-Fuge, 12 mm unter der Polsteroberfläche, 840 mm vom linken Ende.
+Getragen wird sie von zwei schlanken Gelenkkonsolen, die vorn und hinten im Spalt neben den Polstern auf die Längsrohre geschweißt sind.
+Weil die Achse fast auf Polsterhöhe liegt, bleibt die Fuge in jeder Stellung schmal: mindestens 5,3 mm zwischen den Polsterkanten, auch bei Lehne 60° und Sitz 15° gleichzeitig.
+Zwei getrennte Achsen gingen bei dieser Fuge nicht, weil zwei Bolzen M10 mehr als 16 mm Abstand brauchen.
 
-**Sitz:** Unter dem Sitzende liegen zwei ineinander geschachtelte Klappbügel, einer für 10° und einer für 20°.
-Zum Neigen den Sitz anheben, den passenden Bügel hochklappen und den Sitz darauf ablegen. Flach liegen beide Bügel in der Wanne.
+**Verriegelung:** Unter jedem Polster sitzt eine Gleitstütze aus zwei Flachstahlbeinen 25 × 8 mit Quersteg. Ihr Fuß gleitet in zwei C-Schienen auf dem Wannenboden.
+In jeder Arbeitsstellung rastet ein federnder Indexbolzen Ø 10 je Bein in ein Loch der Schiene ein: formschlüssig, nicht nur durch Reibung.
+Die beiden Bolzen einer Stütze werden gemeinsam mit einem Zugknopf gelöst. Flach liegt das Polster auf dem Rahmen, der Gleitschuh steht am Endanschlag, ein Kugelschnäpper hält ihn.
+Die Lochpositionen stehen in [gleitschienen.svg](zeichnungen/gleitschienen.svg) und sind das kritische Maß für den Metallbau.
 
 **Belastung:** Gerechnet sind 120 kg Nutzer mit Stoßfaktor 1,5, in zwei Lastfällen: Gewicht senkrecht nach unten und kräftiges Zurücklehnen senkrecht gegen die Lehne.
-Die Lehnenstütze trägt bis 1,8 kN und hält ein Vielfaches davon aus, bevor sie knickt (Sicherheit ≈ 10). Die Sitzbügel tragen gut 0,8 kN.
-Bei steiler Lehne zieht die Achse nach oben, deshalb sind die Gelenkplatten auf eine Stahl-Gegenplatte unter dem Deckel geschraubt.
-
-![Schrägbank 45°](../renders/schraeg.png)
+Die Lehnenstütze trägt bis 2,8 kN (bei 15°) und knickt erst bei rund dem Zehnfachen. Die Indexbolzen sind mit unter 10 N/mm² Scherspannung kaum ausgelastet.
+Den verbindlichen Nachweis übernimmt der Metallbau bzw. Beschlaglieferant, wie im Vorentwurf gefordert.
 
 ## Was das Design hochwertig macht
 
 | Detail | Umsetzung |
 |---|---|
-| **Weiche Form** | Ecken R 70 aus massiven Eckstollen. Die Maserung läuft senkrecht um die Rundung |
-| **Lamellen-Rolltür** | Gerundete Eichenlamellen auf Leinen, ohne Griffe und Beschläge. Sie verschwindet ganz im Korpus |
-| **Polsterwanne** | Die Polster liegen in einem 20 mm hohen Eichenrand, darunter eine sichtbare Eichenkante (wie im Bildentwurf) |
+| **Weiche Form** | Senkrechte Ecken R 70, formverleimt und stehend furniert, die Maserung läuft um die Rundung |
+| **Verschwindende Rollfront** | Senkrechte Eichenlamellen ohne Griffe und Beschläge. Offen läuft die Front links um die Ecke und hinten zurück, der Innenraum liegt ganz frei |
+| **Polsterwanne** | Die Polster liegen in einem 25 mm hohen Eichenrand, die Polsterplatte zeigt eine sichtbare Eichenkante |
 | **Leder** | Cognac, vollnarbig, mit Kedernaht |
-| **Schwebender Sockel** | Eichenzarge zurückgesetzt, schwarze Füße, Rollen unsichtbar |
-| **Bronze-Akzent** | Fußhebel vorn rechts |
-| **Passende Hanteln** | Schwarze Stahlköpfe und Eichengriffe auf schwarzer Ablage ([hanteln.md](hanteln.md)) |
+| **Schwebender Sockel** | Eichenzarge 25 mm zurückgesetzt, schwarze Füße, Rollen und Rahmen unsichtbar |
+| **Bronze-Akzent** | Fußpedal vorn rechts im Sockel |
+| **Passende Hanteln** | Schwarze Stahlköpfe und Eichengriffe in gepolsterten Einzelaufnahmen ([hanteln.md](hanteln.md)) |
+| **Gelenk** | Im Spalt zwischen den Polstern sichtbar. Schwarz wie die Hanteln oder bronziert wie das Pedal: am Muster entscheiden |
 
 Eine dunkle Alternative (Nussbaum, schwarzes Leder, Messing) ist im Modell mit `farbschema = "nussbaum"` umschaltbar.
 
 ## Aufbau
 
-![Explosionsansicht](../renders/explosion.png)
+![Tragwerk](../renders/tragwerk.png)
 
 | Bauteil | Funktion |
 |---|---|
-| **Mantel** | Stirnseiten und Eckstollen aus Eiche massiv, furnierte Rückwand, Frontleisten oben (mit Rand) und unten |
-| **Deckel, Boden** | Eiche massiv 24 mm, Ecken gerundet, Laufnuten für die Rolltür |
-| **Rolltür** | 65 Lamellen, läuft vorn, in der Tasche links und hinter den Fächern in Nuten |
-| **Trennwände, Fachböden** | Tasche + 3 Fächer (440 / 440 / 308 mm), je 2 Ebenen. Die Trennwände enden vor der hinteren Rolltürbahn |
-| **Rastleisten / Auflageleisten** | schwarz gebeizte Eiche in der Wanne, tragen die Polster und versteifen den Deckel |
-| **Lehne** | Polsterplatte mit 2 Eichenrippen, Klappstütze, Gelenkplatten |
-| **Sitz** | Polsterplatte, 2 Klappbügel, Gelenkplatten |
-| **Sockel** | Eichenzarge, 4 Füße, 4 Absenkrollen auf einer Exzenterwelle, Bronze-Fußhebel |
+| **Innenrahmen** (Metallbau) | 2 Längsrohre 50 × 25 × 3 in der Wanne tragen Polster, Gelenk und Gleitschienen. 6 Stützen 30 × 30 innerhalb der Sockelzarge, Querrohre, Stellfüße an den 4 Eckstützen |
+| **Hantelaufnahmen** | 4 Flachstahltraversen 30 × 8 hochkant zwischen den Stützen, je Hantel 2 gepolsterte Auflagen am Griff, seitliche Anschläge, Sicherungsbügel |
+| **Verkleidung** (Schreiner) | Wannenboden, Boden, Stirnseiten, Rückwand aus eichefurnierten Platten 19 mm, 4 formverleimte Eckrundungen, Frontleisten Eiche massiv. Trägt nicht mit |
+| **Rollfront** | 54 Eichenlamellen 18 × 14 mm auf flexiblem Träger, oben und unten in 8 × 8 mm Nuten geführt |
+| **Innenraum** | Tasche 100 mm, Hantelbereich 660 mm mit 2 Ebenen, Zubehör 378 mm mit Fachboden. Trennwände 12 mm, nicht tragend |
+| **Polster** | Multiplex 18 mit Eichenkante, 52 mm Schaum, Leder. Unter der Lehne 2 Eichenrippen |
+| **Mechanik** | Gemeinsame Achse auf 2 Gelenkkonsolen, 4 Laschen, 2 Gleitstützen, 4 Gleitschienen, 4 Indexbolzen |
+| **Fahrwerk** | Geführter Rollenrahmen, 2 gekoppelte Exzenterwellen, 4 Lenkrollen Ø 50, Bronze-Pedal. Option: Spindelantrieb mit Taster |
 
-Stauraum (Rolltür offen):
+![Explosionsansicht](../renders/explosion.png)
+
+Stauraum (Rollfront offen):
 
 ![Stauraum](../renders/stauraum.png)
 
 ## Fertigung und Kosten
 
-- **Schreiner:** Korpus, Rolltür, Leisten, Polsterplatten, Endmontage. Die Unterlagen stehen in [schreiner.md](schreiner.md), druckfertig als [schreiner-mappe.pdf](schreiner-mappe.pdf).
-- **Metallbau:** Gelenkplatten, Klappstütze, Sitzbügel, Absenkrollen-Mechanik.
-- **Polsterei:** Leder mit Kedernaht.
+Wie im Vorentwurf vier Gewerke, die Unterlagen stehen in [schreiner.md](schreiner.md), druckfertig als [schreiner-mappe.pdf](schreiner-mappe.pdf):
+
+- **Holzbau:** Verkleidung, Rollfront, Polsterplatten, Oberfläche, Endmontage.
+- **Polster:** Schaum und Leder auf den Polsterplatten.
+- **Metallbau und Beschläge:** Innenrahmen, Gelenk, Gleitstützen, Gleitschienen, Hantelaufnahmen.
+- **Fahrwerk:** Rollenrahmen mit Pedal.
 - **Hanteln:** selbst bzw. Dreherei ([hanteln.md](hanteln.md)).
 
-Kosten mit Schreiner grob **5.700–9.700 €**, dazu die Hanteln für ca. 450–750 € (Aufschlüsselung in der [Stückliste](stueckliste.md)).
-Gegenüber dem vorigen Entwurf machen die Rundungen, die Rolltür, der neigbare Sitz und die Absenkrollen die Bank deutlich aufwendiger.
-Das Angebot des Schreiners wird die Zahl genauer zeigen.
+Kosten grob **6.600–12.200 €**, dazu die Hanteln für ca. 460–730 € (Aufschlüsselung in der [Stückliste](stueckliste.md)).
+Der Stahlrahmen und die verriegelnden Beschläge machen die Bank teurer als eine reine Holzlösung, dafür trägt sie Trainingslasten sauber und nachweisbar ab.
+Die Angebote werden die Zahl genauer zeigen.
 
 ## Referenz: Technogym Bench
 
