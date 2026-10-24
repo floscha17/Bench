@@ -8,7 +8,7 @@ Fünf Paar Kurzhanteln, passend zur Bank: schwarze Stahlköpfe, Griff aus Eiche.
 
 ## Aufbau
 
-- **Köpfe:** Rundstahl S235, gedreht. Fase 3 × 45° an allen Kanten, zentrisches Sackloch M16 × 25 mm, 4 mm tiefe Abflachung. Mit ihr rollt die Hantel nicht weg und liegt stabil im Fach.
+- **Köpfe:** Rundstahl S235, gedreht. Fase 3 × 45° an allen Kanten, zentrisches Sackloch M16 × 25 mm, 4 mm tiefe Abflachung. Mit ihr rollt die Hantel nicht weg und liegt stabil auf der Ablage.
 - **Kern:** Gewindestange M16, Festigkeitsklasse 8.8. Sie hält beide Köpfe, die Eichenhülse wird dazwischen geklemmt.
 - **Griff:** Eiche gedreht, Ø 32 mm, Bohrung 16,5 mm, Länge 125 mm. Optional mit feinen Längsrillen wie die Lamellen der Bank, das gibt Grip.
 - **Oberfläche:** Köpfe brüniert und gewachst (Patina gewollt) oder matt schwarz pulverbeschichtet. Griff geölt.

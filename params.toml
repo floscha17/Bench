@@ -1,93 +1,106 @@
 # Zentrale Parameter der Bank – einzige Quelle für Maße.
 # Nach jeder Änderung:  python3 tools/build.py
-# Das erzeugt cad/params.scad, die Stückliste, die Berechnung und die Renderings neu.
+# Das erzeugt cad/params.scad, Stückliste, Berechnung, Hanteln, Zeichnungen und Renderings neu.
 # Alle Maße in mm, Gewichte in kg, Winkel in Grad.
+# Gestaltung nach dem Bildentwurf: gerundete Ecken, Lamellen-Rolltür, Polster in einer Holzwanne,
+# Rückenlehne links und Sitz rechts, beide neigbar, Eichensockel mit schwarzen Füßen.
 
 [bank]
-laenge = 1400   # Länge außen – Bettende eines 180-cm-Betts (je Seite 20 cm Luft)
-tiefe  = 400    # Tiefe außen
-hoehe  = 450    # Oberkante Polster: Sitzhöhe und Trainingshöhe zugleich
+laenge    = 1400   # Bettende eines 180-cm-Betts (je Seite 20 cm Luft)
+tiefe     = 430
+hoehe     = 450    # Polsteroberkante: Sitzhöhe und Trainingshöhe zugleich
+eckradius = 70     # senkrechte Korpusecken im Grundriss gerundet
 
 [material]
-aussen          = 24     # Korpus außen: Eiche massiv, Ecken auf Gehrung mit umlaufender Maserung
-innen           = 18     # Mittelwand, Fachböden: eichefurniertes Multiplex
-rueckwand       = 10     # Rückwand: eichefurniertes Multiplex, in Nut
+aussen          = 24     # Korpus Eiche massiv (Deckel, Boden, Stirnseiten, Eckstollen, Frontleisten)
+innen           = 18     # Trennwände, Fachböden, Rückwand: Multiplex eichefurniert
 dichte_massiv   = 690    # kg/m³ Eiche
 dichte_platte   = 680    # kg/m³ Multiplex
-preis_massiv_m2 = 190    # €/m² Eiche-Leimholz 24 mm, durchgehende Lamelle (Schätzung)
-preis_platte_m2 = 95     # €/m² eichefurniertes Multiplex 18 mm (Schätzung)
+preis_massiv_m2 = 190    # €/m² Eiche-Leimholz 24 mm (Schätzung)
+preis_platte_m2 = 95     # €/m² eichefurniertes Multiplex (Schätzung)
 E_massiv        = 11000  # N/mm², Eiche in Faserrichtung
 E_platte        = 7000   # N/mm², Multiplex flach belastet (konservativ)
 
 [polster]
-platte       = 18     # Trägerplatte Multiplex (Lehne zusätzlich mit 2 Eichenrippen)
-schaum       = 50     # 30 mm hart (RG 50+) + 20 mm mittel (RG 35–40)
-radius       = 12     # Kantenrundung
-einzug       = 15     # Polster rundum gegenüber dem Korpus eingerückt
-schattenfuge = 20     # Luft zwischen Deckel und Polster (Platz für Rastleisten und Stütze)
-sitz_laenge  = 400    # fester Sitz am linken Ende
-fuge         = 25     # zwischen Sitz und Rückenlehne
+platte      = 18     # Trägerplatte mit sichtbarer Eichenkante unter dem Leder
+schaum      = 50     # 30 mm hart (RG 50+) + 20 mm mittel (RG 35–40)
+radius      = 12     # Rundung der Polsteroberkante
+rand        = 20     # Korpusrand über dem Deckel: Polster liegen in einer Wanne
+luft        = 12     # Spalt Polster ↔ Rand (dort sitzen die Gelenkplatten)
+sitz_laenge = 400    # Sitz rechts
+fuge        = 35     # zwischen Lehne und Sitz (Platz für die Polsterkanten bei steiler Lehne und geneigtem Sitz)
 
-[schraegbank]
-winkel           = [20, 30, 45, 60, 75, 85]  # Raststellungen; 0° = flach (Parkstellung)
-achse_unter_oberkante = 25   # Drehachse liegt so weit unter der Polsteroberfläche
-stuetze_abstand  = 430       # Gelenk der Stütze an der Lehnenunterseite, ab Drehachse
-stuetze_laenge   = 490       # Gelenk bis Mitte Querstab
-stuetze_versatz  = 6         # Gelenkpunkt unter der Lehnenplatte
-buegel_d         = 12        # Querstab der Stütze (Stahl rund)
-rast_tiefe       = 8         # Tiefe der Arbeitsrasten
-leiste_breite    = 30
-leiste_einzug    = 25        # Rastleiste innen vom Polsterrand
-min_rastabstand  = 30        # Mindestabstand zwischen zwei Rasten (Steg)
-gelenkplatte     = 5         # Stahlplatte, schwarz pulverbeschichtet oder Messing
-bein_breite      = 25        # Stützenbeine Flachstahl: Breite quer zur Bank
-bein_dicke       = 8         # Dicke in der Klappebene (passt flach in die Schattenfuge)
-rippe_breite     = 60        # 2 Eichenrippen unter der Lehnenplatte
-rippe_hoehe      = 18
-last_anteil      = 0.7       # Anteil des Körpergewichts auf der Lehne
-last_abstand     = 350       # Lastschwerpunkt auf der Lehne, ab Drehachse
+[mechanik]                    # gilt für Lehne und Sitz
+achse_unter_oberkante = 25    # Drehachse so weit unter der Polsteroberfläche
+stuetze_versatz       = 6     # Gelenkpunkt der Stütze unter der Polsterplatte
+buegel_d              = 12    # Querstab der Stütze (Rundstahl)
+rast_tiefe            = 8
+leiste_breite         = 30
+leiste_einzug         = 25    # Rastleiste innen vom Polsterrand
+min_rastabstand       = 30
+gelenkplatte          = 5     # Stahl, schwarz pulverbeschichtet
+bein_breite           = 25    # Stützenbeine Flachstahl: Breite quer zur Bank
+bein_dicke            = 8     # Dicke in der Klappebene (passt flach unter das Polster)
+rippe_breite          = 60    # 2 Eichenrippen unter der Lehnenplatte
+rippe_hoehe           = 18
+
+[lehne]                       # links, hebt sich am linken Ende; Klappstütze rastet in zwei Leisten
+winkel          = [25, 35, 45, 60, 75, 85]   # 0° = flach (Parkstellung)
+stuetze_abstand = 390         # Stützengelenk ab Drehachse (python3 tools/build.py --stuetze-suchen)
+stuetze_laenge  = 480
+last_anteil     = 0.7         # Anteil des Körpergewichts auf der Lehne
+last_abstand    = 350
+
+[sitz]                        # rechts, hebt sich am rechten Ende (verhindert Herunterrutschen)
+winkel          = [10, 20]    # je Winkel ein Klappbügel (wie die Stütze im Bildentwurf), ineinander geschachtelt
+bock_abstand    = 340         # Bügel für den kleinsten Winkel, ab Drehachse
+stufe           = 25          # jeder weitere Bügel so viel näher zur Achse
+last_anteil     = 1.0
+last_abstand    = 150
 
 [korpus]
-sockel_hoehe   = 40    # schwarzer, zurückgesetzter Sockel: Korpus „schwebt“
-sockel_einzug  = 40
-mittelwaende   = 2     # 2 = drei Fächer, passend zu drei Schiebetüren; hält die Deckelspannweite kurz
-fachboden      = true
-fach_unten     = 140   # lichte Höhe der unteren Ebene (schwere Hanteln)
+sockel_hoehe  = 45     # Eichenzarge + schwarze Füße
+sockel_einzug = 25     # Zarge rundum zurückgesetzt
+fuss_d        = 40
+fuss_h        = 10
+fuss_einzug   = 60     # Fußmitte ab Korpuskante
+tasche        = 110    # Tasche links, in die die Rolltür einläuft
+faecher       = [440, 440]   # Fachbreiten nach der Tasche; das letzte Fach rechts bekommt den Rest
+fachboden     = true
+fach_unten    = 130    # lichte Höhe der unteren Ebene
+ablage_h      = 10     # schwarze Hantelablage unter den Köpfen
 
-[tueren]
-anzahl          = 3    # außen vordere Spur, Mitte hintere Spur – jedes Fach einzeln ganz zu öffnen
-ueberlappung    = 40
-lamelle_breite  = 18   # Eiche-Lamellen, Fugen dienen als Lüftung
-lamelle_fuge    = 4
-lamelle_dicke   = 14
-traverse_dicke  = 6    # verdeckte Querleisten hinter den Lamellen
-spur_luft       = 3
-nut_oben        = 10   # Führungsnut im Deckel für die Traversenfeder (Tür zum Einsetzen hochschieben)
+[rolltuer]
+lamelle_breite = 18
+lamelle_fuge   = 1.5
+lamelle_dicke  = 14    # Vorderseite gerundet (Kannelur), auf Leinen geleimt
+luft           = 3     # Abstand zur Vorderkante
+biegeradius    = 50    # kleinster Radius der Laufnut
+nut            = 8     # Laufnut für die Lamellenzapfen, Breite und Tiefe
 
-[rollen]
-aktiv         = true   # verdeckt unter dem hinteren Überstand (Bettseite): vorne anheben, Bank vom Bett wegrollen
-abstand_ende  = 150    # Rollenmitte ab Stirnseite
-durchmesser   = 30
-breite        = 15
-bodenfreiheit = 3      # Rollen greifen erst beim Ankippen
+[rollen]                # Absenkrollen mit Bronze-Fußhebel
+anzahl      = 4
+durchmesser = 40        # lenkbare Doppelrollen, parkettgeeignet
+hub         = 6         # so weit hebt das Absenken die Bank von den Füßen
+pedalweg    = 50
 
 [last]
-nutzer_kg    = 120     # max. Nutzergewicht (wie Technogym)
-dynamik      = 1.5     # Stoßfaktor für Hinsetzen/Übungen
+nutzer_kg = 120
+dynamik   = 1.5
 
 # Selbstgebaute Kurzhanteln: Stahlköpfe (Drehteile) + Eichengriff über Gewindestange.
 # Die Kopflänge wird aus dem Zielgewicht berechnet; je Gewicht wird ein Paar gebaut.
 [hanteln]
-griff_laenge  = 125    # lichte Griffweite zwischen den Köpfen
-griff_d       = 32     # Eichenhülse außen
-kern_d        = 16     # Gewindestange M16, Festigkeitsklasse 8.8
-gewinde_tiefe = 25     # Sackloch-Gewinde je Kopf
-fase          = 3      # Fase 3 × 45° an allen Kopfkanten
-abflachung    = 4      # Abflachung am Kopf: Hantel rollt nicht weg und liegt im Fach stabil (0 = rund)
-zugabe        = 2      # Kopf so viel länger drehen, dann auf Gewicht abstimmen
-dichte_stahl  = 7850
-dichte_griff  = 690
-preis_stahl_kg = 4     # €/kg Rundstahl S235, gesägt (Schätzung)
+griff_laenge   = 125
+griff_d        = 32
+kern_d         = 16
+gewinde_tiefe  = 25
+fase           = 3
+abflachung     = 4      # Hantel rollt nicht weg (0 = rund)
+zugabe         = 2
+dichte_stahl   = 7850
+dichte_griff   = 690
+preis_stahl_kg = 4
 satz = [               # [kg je Hantel, Kopfdurchmesser]
   [2.5, 70],
   [3.5, 70],
@@ -98,7 +111,7 @@ satz = [               # [kg je Hantel, Kopfdurchmesser]
 
 # Weiteres Inventar für den Stauraum (Quader, Schätzwerte).
 [inventar]
-abstand = 15   # Abstandshalter zwischen Hanteln (Fingerschutz, kein Klappern)
+abstand = 15
 
 [[inhalt]]
 name = "Trainingsmatte (gefaltet)"

@@ -1,138 +1,137 @@
-// Sitzbank / Flach- und Schrägbank – parametrisches Modell
+// Sitzbank / Flach- und Schrägbank – parametrisches Modell nach dem Bildentwurf
 // Maße kommen aus params.toml (über tools/build.py → params.scad).
 // Koordinaten: x = Länge (links→rechts), y = Tiefe (vorne→hinten), z = Höhe.
 
 include <params.scad>
 
 // Ansichtsoptionen (im Customizer oder per -D umschaltbar)
-lehne_winkel  = 0;          // 0 = flach, sonst einer der Rastwinkel
-farbschema    = "eiche";    // "eiche" (Eiche natur + Cognac-Leder) | "nussbaum" (Nussbaum + schwarzes Leder + Messing)
-zeige_tueren  = true;
-zeige_polster = true;
-zeige_inhalt  = true;
-geist         = false;      // alle Raststellungen transparent mit anzeigen
-explosion     = 0;          // 0 = zusammengebaut, 1 = Explosionsansicht
+lehne_winkel   = 0;          // 0 = flach, sonst einer der Rastwinkel der Lehne
+sitz_winkel    = 0;          // 0 = flach, sonst einer der Sitzwinkel
+rolltuer_offen = false;
+farbschema     = "eiche";    // "eiche" (Eiche + Cognac-Leder) | "nussbaum" (Nussbaum + schwarzes Leder + Messing)
+zeige_polster  = true;
+zeige_inhalt   = true;
+geist          = false;      // alle Stellungen transparent mit anzeigen
+explosion      = 0;          // 0 = zusammengebaut, 1 = Explosionsansicht
 
-$fn = 40;
+$fn = 48;
 e = explosion;
 
 nuss = farbschema == "nussbaum";
-c_holz   = nuss ? [0.40, 0.27, 0.18] : [0.80, 0.65, 0.46];
-c_lamel  = nuss ? [0.37, 0.25, 0.17] : [0.76, 0.61, 0.42];
-c_innen  = nuss ? [0.46, 0.33, 0.24] : [0.86, 0.74, 0.56];
-c_leder  = nuss ? [0.10, 0.09, 0.09] : [0.55, 0.31, 0.16];
-c_metall = nuss ? [0.80, 0.63, 0.32] : [0.13, 0.13, 0.14];
+c_holz   = nuss ? [0.40, 0.27, 0.18] : [0.78, 0.58, 0.36];
+c_lamel  = nuss ? [0.37, 0.25, 0.17] : [0.74, 0.54, 0.33];
+c_innen  = nuss ? [0.46, 0.33, 0.24] : [0.84, 0.68, 0.48];
+c_leder  = nuss ? [0.10, 0.09, 0.09] : [0.60, 0.27, 0.15];
+c_metall = nuss ? [0.78, 0.62, 0.32] : [0.11, 0.11, 0.12];
+c_bronze = [0.56, 0.41, 0.22];
 c_dunkel = [0.09, 0.08, 0.08];
 c_hantel = [0.14, 0.14, 0.14];
 c_box    = [0.30, 0.33, 0.32];
-c_rolle  = [0.08, 0.08, 0.08];
 
 r_stab = buegel_d / 2;
+z_unten = polster_z0 - achse_z;       // Unterseite der Polsterplatte relativ zur Drehachse
+
+// Rechteck mit gerundeten senkrechten Kanten
+module rrect(x, y, l, b, r, z0, h) {
+    translate([x, y, z0]) hull()
+        for (cx = [r, l - r], cy = [r, b - r]) translate([cx, cy, 0]) cylinder(r = r, h = h);
+}
 
 module quader(pos, groesse, farbe) {
     translate(pos) color(farbe) cube(groesse);
 }
 
-// ---------- Korpus ----------
+// ---------- Korpus mit gerundeten Ecken ----------
 
 module korpus() {
-    // Gehrungskasten aus Eiche: Deckel, Boden, Seitenwangen
-    quader([0, 0, deckel_z0 + 90 * e], [L, D, t], c_holz);
-    quader([0, 0, boden_z0 - 30 * e], [L, D, t], c_holz);
-    quader([-140 * e, 0, boden_z0], [t, D, korpus_h], c_holz);
-    quader([L - t + 140 * e, 0, boden_z0], [t, D, korpus_h], c_holz);
-    // Innenleben
-    quader([t, rueck_y0 + 120 * e, boden_z1], [innen_l, tr, innen_h], c_innen);
-    if (n_mw > 0) for (i = [1 : n_mw])
-        quader([fach_x0[i] - ti, fach_y0, boden_z1], [ti, fach_tiefe, innen_h], c_innen);
+    // Mantel: Stirnseiten, Eckstollen, Rückwand, Frontleisten oben (Rand) und unten
+    color(c_holz) difference() {
+        rrect(0, 0, L, D, R, boden_z0, korpus_h);
+        rrect(t, t, L - 2 * t, D - 2 * t, R - t, boden_z0 - 1, korpus_h + 2);
+        translate([rt_x0, -1, boden_z1]) cube([rt_len, t + 2, innen_h]);
+    }
+    // Deckel (bildet den Boden der Polsterwanne) und Boden
+    color(c_holz) rrect(t, t, L - 2 * t, D - 2 * t, R - t, deckel_z0 + 90 * e, t);
+    color(c_holz) rrect(t, t, L - 2 * t, D - 2 * t, R - t, boden_z0 - 30 * e, t);
+    // Trennwände (enden vor der hinteren Rolltürbahn) und Fachböden
+    for (x = mw_x) quader([x, fach_y0, boden_z1], [ti, fach_tiefe, innen_h], c_innen);
     if (fachboden)
-        for (x = fach_x0)
-            quader([x + 1, fach_y0 + 5, fachboden_z0], [fach_breite - 2, fach_tiefe - 5, ti], c_innen);
+        for (i = [0 : len(fach_x0) - 1])
+            quader([fach_x0[i] + 1, fach_y0 + 5, fachboden_z0], [fach_breiten[i] - 2, fach_tiefe - 5, ti], c_innen);
 }
 
 module sockel() {
-    translate([0, 0, -70 * e]) color(c_dunkel) difference() {
-        translate([sockel_einzug, sockel_einzug, 0])
-            cube([L - 2 * sockel_einzug, D - 2 * sockel_einzug, sockel_h - 0.5]);
-        translate([sockel_einzug + t, sockel_einzug + t, -1])
-            cube([L - 2 * sockel_einzug - 2 * t, D - 2 * sockel_einzug - 2 * t, sockel_h + 2]);
+    translate([0, 0, -70 * e]) {
+        // Eichenzarge, zurückgesetzt, Ecken gerundet
+        color(c_holz) difference() {
+            rrect(sockel_einzug, sockel_einzug, L - 2 * sockel_einzug, D - 2 * sockel_einzug,
+                  R - sockel_einzug, fuss_h, sockel_h - fuss_h - 0.5);
+            rrect(sockel_einzug + 20, sockel_einzug + 20, L - 2 * sockel_einzug - 40, D - 2 * sockel_einzug - 40,
+                  R - sockel_einzug - 20, fuss_h - 1, sockel_h);
+        }
+        // schwarze Füße
+        for (p = fuss_pos) translate([p[0], p[1], 0]) color(c_dunkel) cylinder(d = fuss_d, h = fuss_h);
+        // Absenkrollen (hochgestellt) und Exzenterwelle
+        for (p = rollen_pos) translate([p[0], p[1], fuss_h + 2 + rolle_d / 2]) color(c_dunkel) {
+            for (dy = [-11, 1]) translate([0, dy, 0]) rotate([-90, 0, 0]) cylinder(d = rolle_d, h = 10);
+            translate([-15, -14, rolle_d / 2]) cube([30, 28, 4]);
+        }
+        color([0.4, 0.4, 0.4]) translate([rollen_pos[0][0], rollen_pos[0][1], fuss_h + rolle_d + 10])
+            rotate([0, 90, 0]) cylinder(d = 16, h = rollen_pos[1][0] - rollen_pos[0][0]);
+        // Bronze-Fußhebel vorn rechts
+        color(c_bronze) translate([pedal_x, -4, 16]) {
+            cube([64, sockel_einzug + 30, 6]);
+            translate([0, 0, 6]) cube([64, 5, 6]);
+        }
     }
 }
 
-// Rollen verdeckt unter dem hinteren Überstand (Bettseite), rollen quer zur Bank
-module rollen() {
-    for (x = rolle_x)
-        translate([x - rolle_b / 2, D - sockel_einzug / 2, rolle_d / 2 + rolle_luft - 70 * e]) {
-            rotate([0, 90, 0]) color(c_rolle) cylinder(d = rolle_d, h = rolle_b);
-            color([0.5, 0.5, 0.5]) translate([-3, -12, rolle_d / 2 - 2]) cube([rolle_b + 6, 24, 4]);
+// ---------- Rolltür aus Lamellen ----------
+
+module rt_lamelle(h) {
+    // gerundete Vorderseite (Kannelur)
+    translate([0, 4, 0]) cube([rt_b, rt_dicke - 4, h]);
+    translate([rt_b / 2, 4, 0]) scale([1, 8 / rt_b, 1]) cylinder(d = rt_b, h = h, $fn = 24);
+}
+
+module rolltuer() {
+    h = innen_h - 2;
+    schritt = rt_b + rt_fuge;
+    color(c_lamel) translate([0, -200 * e, boden_z1 + 1])
+        if (!rolltuer_offen) {
+            for (i = [0 : rt_n - 1]) translate([rt_x0 + i * schritt, rt_y0, 0]) rt_lamelle(h);
+        } else {
+            // in der Tasche links nach hinten, dann hinter den Fächern entlang
+            n_tasche = floor((fach_tiefe - 20) / schritt);
+            for (i = [0 : n_tasche - 1])
+                translate([tasche_x0 + 8, fach_y0 + 10 + i * schritt + rt_b, 0]) rotate([0, 0, -90]) rt_lamelle(h);
+            for (i = [0 : rt_n - n_tasche - 1])
+                translate([tasche_x0 + 30 + i * schritt + rt_b, rt_hinten_y0 + rt_dicke, 0]) rotate([0, 0, 180]) rt_lamelle(h);
         }
-}
-
-// ---------- Türen aus Lamellen ----------
-
-module lamelle(h) {
-    // Vorderkanten gerundet
-    hull() for (x = [3, lamelle_b - 3])
-        translate([x, 3, 0]) cylinder(r = 3, h = h, $fn = 16);
-    translate([0, 3, 0]) cube([lamelle_b, lamelle_dicke - 3, h]);
-}
-
-module tuer() {
-    h = tuer_h;
-    color(c_lamel) for (k = [0 : n_lamellen - 1])
-        translate([k * (lamelle_b + lamelle_fuge), 0, 0]) lamelle(h);
-    // verdeckte Traversen hinter den Lamellen
-    color(c_dunkel) for (z = [20, h - 60])
-        translate([0, lamelle_dicke, z]) cube([tuer_l, traverse_dicke, 40]);
-}
-
-module tueren() {
-    for (i = [0 : len(tuer_x0) - 1])
-        translate([tuer_x0[i], tuer_y0[i % 2] - 220 * e, tuer_z0]) tuer();
 }
 
 // ---------- Polster ----------
 
-module polster(laenge, alpha = 1) {
-    // Lederpolster: Trägerplatte ist umpolstert, Kanten gerundet
-    r = polster_r;
-    color(c_leder, alpha) hull() {
-        for (x = [r, laenge - r], y = [r, pad_b - r]) {
-            translate([x, y, polster_h - r]) sphere(r = r);
-            translate([x, y, 3]) sphere(r = 3);
+// Polster in lokalen Koordinaten: u = 0 an der Drehachse (innen), u = laenge außen
+module polster_koerper(laenge, alpha = 1) {
+    ri = polster_r;
+    ra = pad_r_aussen;
+    ecken = [[ri, ri, ri], [ri, pad_b - ri, ri], [laenge - ra, ra, ra], [laenge - ra, pad_b - ra, ra]];
+    // Trägerplatte mit sichtbarer Eichenkante
+    color(c_holz, alpha) hull() for (c = ecken) translate([c[0], c[1], 0]) cylinder(r = c[2], h = polster_platte);
+    // Lederpolster mit gerundeter Oberkante
+    schaum = polster_h - polster_platte;
+    color(c_leder, alpha) hull() for (c = ecken) translate([c[0], c[1], polster_platte]) {
+        cylinder(r = c[2] - 1, h = 1);
+        for (k = [0 : 3]) {
+            w = k * 30;
+            translate([0, 0, schaum - polster_r + polster_r * sin(w)])
+                cylinder(r = max(c[2] - polster_r + polster_r * cos(w), 0.5), h = 0.5);
         }
     }
 }
 
-module sitz() {
-    translate([sitz_x0, pad_y0, polster_z0 + 260 * e]) polster(sitz_x1 - sitz_x0);
-    // schwarzer Distanzrahmen unter dem Sitz (Schattenfuge)
-    translate([sitz_x0 + 25, pad_y0 + 25, deckel_z1 + 150 * e]) color(c_dunkel) difference() {
-        cube([sitz_x1 - sitz_x0 - 50, pad_b - 50, schattenfuge]);
-        translate([20, 20, -1]) cube([sitz_x1 - sitz_x0 - 90, pad_b - 90, schattenfuge + 2]);
-    }
-}
-
-// Lehne in eigenen Koordinaten (Ursprung = Drehachse), flach
-module lehne_lokal(alpha = 1) {
-    z_unten = polster_z0 - achse_z;
-    translate([0, pad_y0, z_unten]) polster(lehne_l, alpha);
-    if (alpha == 1) {
-        // Eichenrippen unter der Lehnenplatte
-        for (y = rippe_y0)
-            translate([20, y, z_unten - rippe_h]) color(c_holz) cube([rippe_l, rippe_b, rippe_h]);
-        // Gelenkplatten der Lehne (innen), vorne und hinten
-        for (y = [pad_y0 - gelenkplatte - 1.5, D - pad_y0 + 1.5])
-            translate([0, y, 0]) gelenkplatte_lehne();
-        // Lagerböcke der Stütze
-        for (y = bein_y0)
-            translate([stuetze_s - 15, y + (y < D / 2 ? bein_b : -12), z_unten - 14])
-                color(c_metall) cube([30, 12, 14]);
-    }
-}
-
-module gelenkplatte_lehne() {
-    z_unten = polster_z0 - achse_z;
+module gelenkplatte_teil() {
     color(c_metall) rotate([90, 0, 0]) translate([0, 0, -gelenkplatte]) linear_extrude(gelenkplatte)
         hull() {
             circle(r = 11);
@@ -140,63 +139,100 @@ module gelenkplatte_lehne() {
         }
 }
 
-module gelenkplatten_korpus() {
-    // äußere Platten, mit Fuß unter dem Sitz verschraubt
-    for (y = [pad_y0 - 2 * gelenkplatte - 3, D - pad_y0 + 3 + gelenkplatte])
-        translate([achse_x, y, achse_z + 200 * e]) color(c_metall)
-            rotate([90, 0, 0]) translate([0, 0, -gelenkplatte]) linear_extrude(gelenkplatte)
-                hull() {
-                    circle(r = 11);
-                    translate([-30, deckel_z1 - achse_z]) square([38, 6]);
-                }
-    // Bolzenköpfe
-    for (y = [pad_y0 - 2 * gelenkplatte - 5, D - pad_y0 + 3 + 2 * gelenkplatte])
-        translate([achse_x, y, achse_z + 200 * e]) rotate([-90, 0, 0])
-            color(nuss ? c_metall : [0.72, 0.58, 0.30]) cylinder(d = 16, h = 2);
+// Rückenlehne lokal (u nach +x), wird an der Achse gespiegelt, weil sie sich nach links hebt
+module lehne_lokal(alpha = 1) {
+    translate([0, pad_y0, z_unten]) polster_koerper(lehne_laenge, alpha);
+    if (alpha == 1) {
+        for (y = rippe_y0)
+            translate([20, y, z_unten - rippe_h]) color(c_holz) cube([lehne_rippe_l, rippe_b, rippe_h]);
+        for (y = [pad_y0 - gelenkplatte - 0.5, D - pad_y0 + 0.5]) translate([0, y, 0]) gelenkplatte_teil();
+        for (y = bein_y0)
+            translate([lehne_s - 15, y + (y < D / 2 ? bein_b : -12), z_unten - 14]) color(c_metall) cube([30, 12, 14]);
+    }
 }
 
-// Pose der Stütze für einen Winkel: [Gelenk A, Mitte Querstab N] in globalen x/z
-function gelenk(a) = [achse_x + stuetze_s * cos(a) - vA * sin(a),
-                      achse_z + stuetze_s * sin(a) + vA * cos(a)];
-function stab(a) = a == 0
-    ? [achse_x + stuetze_s + stuetze_l, achse_z + vA]
-    : let(A = gelenk(a), dz = A[1] - (achse_z + rast_z))
-      [A[0] + sqrt(stuetze_l * stuetze_l - dz * dz), achse_z + rast_z];
+module sitz_lokal(alpha = 1) {
+    translate([0, pad_y0, z_unten]) polster_koerper(sitz_laenge, alpha);
+    if (alpha == 1)
+        for (y = [pad_y0 - gelenkplatte - 0.5, D - pad_y0 + 0.5]) translate([0, y, 0]) gelenkplatte_teil();
+}
 
-module stuetze(a) {
+// Stütze der Lehne: Gelenk A und Querstab N in lokalen Koordinaten [u, z relativ Achse]
+function gelenk(a) = [lehne_s * cos(a) - vA * sin(a), lehne_s * sin(a) + vA * cos(a)];
+function stab(a) = a == 0
+    ? [lehne_s + lehne_l_stuetze, vA]
+    : let(A = gelenk(a), dz = A[1] - rast_z)
+      [A[0] + sqrt(lehne_l_stuetze * lehne_l_stuetze - dz * dz), rast_z];
+
+module stuetze_lehne(a) {
     A = gelenk(a);
     N = stab(a);
+    xa = lehne_achse_x + lehne_dir * A[0];
+    xn = lehne_achse_x + lehne_dir * N[0];
     color(c_metall) {
         for (y = bein_y0) hull() {
-            translate([A[0], y, A[1]]) rotate([-90, 0, 0]) cylinder(d = bein_t, h = bein_b);
-            translate([N[0], y, N[1]]) rotate([-90, 0, 0]) cylinder(d = bein_t, h = bein_b);
+            translate([xa, y, achse_z + A[1]]) rotate([-90, 0, 0]) cylinder(d = bein_t, h = bein_b);
+            translate([xn, y, achse_z + N[1]]) rotate([-90, 0, 0]) cylinder(d = bein_t, h = bein_b);
         }
-        translate([N[0], stab_y0, N[1]]) rotate([-90, 0, 0]) cylinder(d = buegel_d, h = stab_l);
+        translate([xn, stab_y0, achse_z + N[1]]) rotate([-90, 0, 0]) cylinder(d = buegel_d, h = stab_l);
     }
 }
 
-module rastleisten() {
-    translate([0, 0, 150 * e]) color(c_dunkel) for (y = leiste_y0) difference() {
-        translate([leiste_x0, y, deckel_z1]) cube([leiste_x1 - leiste_x0, leiste_b, schattenfuge]);
-        for (n = rasten)
-            translate([achse_x + n, y - 1, polster_z0 - rast_tiefe + r_stab])
-                rotate([-90, 0, 0]) cylinder(d = buegel_d + 1, h = leiste_b + 2);
-        // Parkrast: Stab liegt versenkt, die Lehne liegt flach auf
-        translate([achse_x + park, y - 1, polster_z0 - park_tiefe + r_stab])
-            rotate([-90, 0, 0]) cylinder(d = buegel_d + 1, h = leiste_b + 2);
-        translate([achse_x + park - r_stab - 0.5, y - 1, polster_z0 - park_tiefe + r_stab])
-            cube([buegel_d + 1, leiste_b + 2, park_tiefe]);
+// Klappbügel unter dem Sitz: je Winkel einer, ineinander geschachtelt.
+// Der Bügel des eingestellten Winkels steht senkrecht, die anderen liegen flach in der Wanne.
+module sitzbuegel(a) {
+    n = len(sitz_stufen);
+    for (i = [0 : n - 1]) {
+        u = sitz_stufen[i][0];
+        h = sitz_stufen[i][1];
+        y0 = bein_y0[0] + 2 + (n - 1 - i) * 12;
+        y1 = bein_y0[1] + bein_b - 2 - (n - 1 - i) * 12;
+        steht = a == sitz_winkel_liste[i];
+        // Beine Flachstahl 30 × 8 (8 mm in Längsrichtung, damit der Bügel umgeklappt flach liegt)
+        color(c_metall) translate([sitz_achse_x + u, 0, deckel_z1 + (steht ? 0 : 8)]) rotate([0, steht ? 0 : -90, 0]) {
+            for (y = [y0, y1 - 30]) translate([-8, y, 0]) cube([8, 30, h]);
+            translate([-8, y0, h - 8]) cube([8, y1 - y0, 8]);
+        }
     }
 }
 
-module lehne(a) {
-    translate([achse_x, 0, achse_z + 260 * e]) rotate([0, -a, 0]) lehne_lokal();
-    translate([0, 0, 260 * e]) stuetze(a);
+module leisten() {
+    translate([0, 0, 150 * e]) color(c_dunkel) {
+        for (y = leiste_y0) {
+            difference() {
+                translate([lehne_leiste_x0, y, deckel_z1]) cube([lehne_leiste_x1 - lehne_leiste_x0, leiste_b, rand]);
+                for (n = lehne_rasten)
+                    translate([lehne_achse_x + lehne_dir * n, y - 1, polster_z0 - rast_tiefe + r_stab])
+                        rotate([-90, 0, 0]) cylinder(d = buegel_d + 1, h = leiste_b + 2);
+                translate([lehne_achse_x + lehne_dir * lehne_park - r_stab - 0.5, y - 1, polster_z0 - park_tiefe])
+                    cube([buegel_d + 1, leiste_b + 2, park_tiefe + 1]);
+            }
+            translate([sitz_leiste_x0, y, deckel_z1]) cube([sitz_leiste_x1 - sitz_leiste_x0, leiste_b, rand]);
+        }
+    }
+}
+
+module gelenkplatten_korpus() {
+    // je eine Platte vorn und hinten am Rand, trägt beide Achsen
+    for (y = [t + 0.5, D - t - 0.5 - gelenkplatte])
+        translate([0, y + gelenkplatte, achse_z + 200 * e]) color(c_metall) rotate([90, 0, 0])
+            linear_extrude(gelenkplatte) hull() {
+                translate([lehne_achse_x, 0]) circle(r = 11);
+                translate([sitz_achse_x, 0]) circle(r = 11);
+                translate([lehne_achse_x - 14, deckel_z1 - achse_z]) square([sitz_achse_x - lehne_achse_x + 28, 6]);
+            }
+}
+
+module lehne(a, alpha = 1) {
+    translate([lehne_achse_x, 0, achse_z + 260 * e]) mirror([1, 0, 0]) rotate([0, -a, 0]) lehne_lokal(alpha);
+}
+
+module sitz(a, alpha = 1) {
+    translate([sitz_achse_x, 0, achse_z + 260 * e]) rotate([0, -a, 0]) sitz_lokal(alpha);
 }
 
 // ---------- Inhalt ----------
 
-// selbstgebaute Hantel: runde Stahlköpfe mit Abflachung, Eichengriff; liegt auf der Abflachung
 module hantel_rund(kopf, kopf_l, laenge) {
     zc = kopf / 2 - abflachung;
     difference() {
@@ -209,26 +245,18 @@ module hantel_rund(kopf, kopf_l, laenge) {
         color(c_holz) cylinder(d = griff_d, h = laenge - 2 * kopf_l, $fn = 32);
 }
 
-module kurzhantel(kopf, laenge) {
-    kl = kopf * 0.42;
-    for (y = [0, laenge - kl])
-        translate([kopf / 2, y, kopf / 2]) rotate([-90, 0, 0])
-            color(c_hantel) cylinder(d = kopf / cos(30), h = kl, $fn = 6);
-    translate([kopf / 2, kl, kopf / 2]) rotate([-90, 0, 0])
-        color([0.7, 0.7, 0.7]) cylinder(d = 32, h = laenge - 2 * kl);
-}
-
 module inhalt_zeichnen() {
     for (it = inhalt) {
         typ = it[0]; x = it[1]; y = it[2]; z = it[3];
         b = it[4]; h = it[5]; tf = it[6]; kopf = it[7]; kopf_l = it[8];
         translate([x, y, z])
             if (typ == "khr") {
-                hantel_rund(kopf, kopf_l, tf);
-                translate([kopf + abstand, 0, 0]) hantel_rund(kopf, kopf_l, tf);
-            } else if (typ == "kh") {
-                kurzhantel(kopf, tf);
-                translate([kopf + abstand, 0, 0]) kurzhantel(kopf, tf);
+                // schwarze Ablage unter den Köpfen
+                color(c_dunkel) for (yy = [0, tf - kopf_l]) translate([-4, yy, 0]) cube([b + 8, kopf_l, ablage_h]);
+                translate([0, 0, ablage_h]) {
+                    hantel_rund(kopf, kopf_l, tf);
+                    translate([kopf + abstand, 0, 0]) hantel_rund(kopf, kopf_l, tf);
+                }
             } else {
                 color(c_box) cube([b, tf, h]);
             }
@@ -239,15 +267,17 @@ module inhalt_zeichnen() {
 
 korpus();
 sockel();
-if (rollen) rollen();
-if (zeige_tueren) tueren();
-rastleisten();
+rolltuer();
+leisten();
 gelenkplatten_korpus();
+translate([0, 0, 260 * e]) stuetze_lehne(lehne_winkel);
+translate([0, 0, 150 * e]) sitzbuegel(sitz_winkel);
 if (zeige_polster) {
-    sitz();
     lehne(lehne_winkel);
-    if (geist)
-        for (a = concat([0], winkel)) if (a != lehne_winkel)
-            translate([achse_x, 0, achse_z]) rotate([0, -a, 0]) lehne_lokal(0.18);
+    sitz(sitz_winkel);
+    if (geist) {
+        for (a = concat([0], lehne_winkel_liste)) if (a != lehne_winkel) lehne(a, 0.18);
+        for (a = concat([0], sitz_winkel_liste)) if (a != sitz_winkel) sitz(a, 0.18);
+    }
 }
 if (zeige_inhalt) inhalt_zeichnen();
