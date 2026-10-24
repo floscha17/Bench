@@ -1,0 +1,126 @@
+# Zentrale Parameter der Bank – einzige Quelle für Maße.
+# Nach jeder Änderung:  python3 tools/build.py
+# Das erzeugt cad/params.scad, die Stückliste, die Berechnung und die Renderings neu.
+# Alle Maße in mm, Gewichte in kg.
+
+[bank]
+laenge = 1200   # Länge außen
+tiefe  = 400    # Tiefe außen (= Polsterbreite)
+hoehe  = 450    # Oberkante Polster: Sitzhöhe und Trainingshöhe zugleich
+
+[material]
+platte          = 18     # Korpus: Birke Multiplex 18 mm
+tuer            = 12     # Schiebetüren: Birke Multiplex 12 mm
+dichte_platte   = 680    # kg/m³ Birke Multiplex
+dichte_leiste   = 720    # kg/m³ Buche massiv
+preis_m2_18     = 75     # €/m², grobe Schätzung Zuschnitt Baumarkt/Holzhandel
+preis_m2_12     = 60     # €/m²
+E_hochkant      = 6000   # N/mm², Multiplex hochkant belastet (konservativ)
+E_flach         = 7000   # N/mm², Multiplex flach belastet (konservativ)
+E_leiste        = 12000  # N/mm², Buche massiv in Faserrichtung
+
+[polster]
+platte = 15     # Trägerplatte Multiplex
+schaum = 50     # Schaumstoff gesamt (z. B. 30 mm hart + 20 mm mittel)
+radius = 12     # Kantenrundung des Polsters
+
+[korpus]
+fuss_hoehe     = 40    # Ausschnitt unten in den Seitenwangen
+fuss_breite    = 60    # Breite der Füße vorne/hinten
+sockel_versatz = 30    # Rücksprung der vorderen Sockelblende
+mittelwaende   = 1     # Anzahl senkrechter Trennwände (1 = zwei Fächer, passend zu zwei Türen)
+fachboden      = true  # Zwischenboden in jedem Fach
+
+[tueren]
+anzahl          = 2     # Schiebetüren auf zwei Laufspuren
+ueberlappung    = 40
+nut_unten       = 5     # Nuttiefe im Boden
+nut_oben        = 14    # Nuttiefe in der Führungsleiste (zum Einhängen)
+nut_breite      = 13    # 12 mm Tür + 1 mm Luft
+leiste_hoehe    = 25    # Führungsleiste Buche unter dem Deckel (sichtbar vorne)
+leiste_tiefe    = 50
+schlitz_breite  = 8     # Lüftungs-/Griffschlitze in den Türen
+schlitz_abstand = 30
+schlitz_rand    = 35
+
+[rollen]
+aktiv         = true  # Transportrollen an der rechten Stirnseite (wie Technogym)
+durchmesser   = 50
+breite        = 18
+bodenfreiheit = 4     # Rollen berühren den Boden erst beim Ankippen
+
+[griff]
+breite      = 120     # Griffloch in der linken Seitenwange zum Ankippen
+hoehe       = 30
+abstand_oben = 30
+
+[last]
+nutzer_kg   = 120     # max. Nutzergewicht (wie Technogym)
+dynamik     = 1.5     # Stoßfaktor für Hinsetzen/Übungen
+anteil_front = 0.5    # Anteil, den die vordere Kante allein trägt
+
+# Stauraum-Inventar. Maße der Hanteln sind SCHÄTZWERTE für Hex-Kurzhanteln –
+# bitte an den echten Hanteln nachmessen und hier eintragen.
+# typ "kh" = Kurzhantel-Paar (breite ergibt sich aus 2 × kopf + abstand),
+# typ "box" = beliebiges Teil als Quader.
+[inventar]
+abstand = 15   # Abstandshalter zwischen Hanteln (Fingerschutz, kein Klappern)
+
+[[inhalt]]
+name = "Kurzhanteln 10 kg (Paar)"
+typ = "kh"
+kopf = 125
+laenge = 310
+kg = 20
+
+[[inhalt]]
+name = "Kurzhanteln 7,5 kg (Paar)"
+typ = "kh"
+kopf = 113
+laenge = 285
+kg = 15
+
+[[inhalt]]
+name = "Kurzhanteln 5 kg (Paar)"
+typ = "kh"
+kopf = 100
+laenge = 260
+kg = 10
+
+[[inhalt]]
+name = "Kurzhanteln 3,5 kg (Paar)"
+typ = "kh"
+kopf = 88
+laenge = 245
+kg = 7
+
+[[inhalt]]
+name = "Kurzhanteln 2,5 kg (Paar)"
+typ = "kh"
+kopf = 80
+laenge = 230
+kg = 5
+
+[[inhalt]]
+name = "Trainingsmatte (gefaltet)"
+typ = "box"
+breite = 340
+hoehe = 60
+tiefe = 300
+kg = 1.5
+
+[[inhalt]]
+name = "Widerstandsbänder (3 Stück)"
+typ = "box"
+breite = 160
+hoehe = 60
+tiefe = 250
+kg = 0.6
+
+[[inhalt]]
+name = "Gewichtsmanschetten/Knuckles (3 Paar)"
+typ = "box"
+breite = 160
+hoehe = 70
+tiefe = 220
+kg = 4.9
