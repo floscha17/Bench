@@ -1,62 +1,100 @@
-# Konzept: Sitzbank, die zur Trainingsbank wird
+# Konzept: Sitzbank, die zur Flach- und Schrägbank wird
 
 ## Die Idee
 
-Ein Möbelstück, das im Alltag als Sitzbank im Flur, am Bettende oder im Wohnzimmer steht.
-Zum Training nimmt man die Hanteln aus dem Stauraum, und die Bank ist eine stabile Flachbank.
-Vorbild ist die [Technogym Bench](https://www.technogym.com/en-US/product/technogym-bench_DGY100.html):
-Flachbank mit eingebautem Stauraum für Hanteln, Bänder und Matte.
+Ein hochwertiges Möbelstück, das im Alltag als gepolsterte Sitzbank im Flur, am Bettende oder im Wohnzimmer steht.
+Zum Training nimmt man die Hanteln aus dem Stauraum und nutzt die Bank flach. Oder man stellt die Rückenlehne in einer von sechs Stellungen zwischen 25° und 85° auf und nutzt sie als Schrägbank.
+Vorbild ist die [Technogym Bench](https://www.technogym.com/en-US/product/technogym-bench_DGY100.html), die allerdings nur flach ist.
+
+![Bank als Möbel](../renders/moebel.png)
 
 ## Macht das Sinn? Ja.
 
-**Die Maße einer Sitzbank und einer Flachbank sind fast gleich.**
+**Die Maße einer Sitzbank und einer Trainingsbank sind fast gleich.**
 
-| | Sitzbank (Möbel) | Flachbank (Training) | Technogym Bench | **Dieser Entwurf** |
+| | Sitzbank (Möbel) | Trainingsbank | Technogym Bench | **Dieser Entwurf** |
 |---|---|---|---|---|
 | Höhe | 43–47 cm | 42–45 cm (Wettkampfnorm IPF) | 45,5 cm | **45 cm** |
-| Länge | 100–140 cm | 110–125 cm Polster | 112,9 cm | **120 cm** |
-| Tiefe/Breite | 35–45 cm | 26–32 cm Polster | 37,6 cm | **40 cm** |
+| Länge | 100–140 cm | 110–125 cm | 112,9 cm | **120 cm** |
+| Polsterbreite | 35–45 cm | 26–32 cm | 37,6 cm | **37 cm** |
+| Sitz / Lehne | – | ca. 30–35 / 75–85 cm | – | **34 / 80,5 cm** |
 
-Weitere Gründe:
+- **Ein Kasten ist steifer als ein Gestell.** Deckel, Boden, Wangen und die verleimte Rückwand bilden eine geschlossene Box ([berechnung.md](berechnung.md)).
+- **Die Bank kann im Training nicht kippen.** Sie kippt erst, wenn rund 300 kg auf der Längskante stehen, mit Hanteln im Stauraum rund 700 kg.
+- **Das Gewicht hilft.** Leer wiegt die Bank etwa 46 kg, mit Hanteln etwa 110 kg. Beim Hip Thrust oder beim Rudern wandert sie nicht.
+- **Der Stauraum löst das eigentliche Problem.** Die Hanteln liegen sonst sichtbar herum, hier hinter einer Lamellenfront.
 
-- **Ein Kasten ist steifer als ein Gestell.** Deckel, Rückwand, Boden und Wangen bilden eine geschlossene Box.
-  Die Überschlagsrechnung ([berechnung.md](berechnung.md)) zeigt bei 120 kg mit Stoßfaktor 1,5 nur etwa 1 mm Durchbiegung.
-- **Die Bank kann nicht kippen.** Die Seitenwangen stehen bündig mit den Außenkanten, und das Polster steht nicht über.
-  Senkrechte Lasten liegen damit immer innerhalb der Standfläche. Bei vielen Trainingsbänken mit schmalem Fuß ist das nicht so.
-- **Das Gewicht hilft.** Leer wiegt die Bank etwa 40 kg, mit Hanteln etwa 100 kg. Sie rutscht beim Hip Thrust oder beim Rudern nicht weg.
-- **Der Stauraum löst das eigentliche Problem.** Hanteln liegen sonst sichtbar herum, hier sind sie hinter Türen verstaut.
+## Schrägbank-Mechanik
 
-### Zielkonflikte und wie der Entwurf sie löst
+![Verstellbereich](../renders/verstellung.png)
+
+| Stellung | Wofür |
+|---|---|
+| 0° flach | Sitzbank, Kurzhantel-Bankdrücken, Rudern, Hip Thrust, Step-ups |
+| 25° / 35° | Schrägbankdrücken (obere Brust), Fliegende schräg |
+| 45° | Schrägbankdrücken steil, Incline Curls, brustgestütztes Rudern |
+| 60° / 75° | Schulterdrücken mit Schräge, Seitheben sitzend |
+| 85° | Schulterdrücken sitzend, Bizeps-Curls mit Rückenlehne |
+
+**So funktioniert sie:**
+
+1. **Drehachse:** Die Rückenlehne dreht sich um eine Achse an ihrer Vorderkante, 25 mm unter der Polsteroberfläche.
+   Weil die Achse fast auf Sitzhöhe liegt, bleibt die Fuge zwischen Sitz und Lehne in jeder Stellung klein (25 mm), und die Lehne beginnt direkt am Sitz.
+   Getragen wird die Achse von zwei schmalen Stahlplatten an der Vorder- und Rückseite, in der 15 mm breiten Fuge zwischen Polster und Korpuskante.
+   Sie sind das einzige sichtbare Metall, in Schwarz oder Messing.
+2. **Klappstütze:** Unter der Lehne hängt eine U-förmige Stütze aus Flachstahl mit einem Querstab.
+   Ihr Querstab rastet in **zwei schwarzen Eichenleisten** auf dem Deckel ein. Die Leisten liegen in der Schattenfuge unter dem Polster und sind bei flacher Lehne unsichtbar.
+3. **Parkstellung:** Bei flacher Lehne liegt die Stütze zusammengeklappt in der Schattenfuge, der Querstab versenkt in einer tieferen Parkrast.
+   Die Lehne liegt dann vollflächig auf den Leisten auf und ist eine normale Flachbank.
+
+**Bedienung:** Lehne am Ende anheben, bis die Stütze frei nach unten pendelt. Querstab in die gewünschte Rast setzen und die Lehne ablegen.
+Zurück: Lehne kurz anheben, Stütze an die Lehne klappen, Querstab in die Parkrast legen und die Lehne ablegen.
+
+**Belastung:** Gerechnet sind 70 % von 120 kg mit Stoßfaktor 1,5. Dabei gibt es zwei Lastfälle: das Gewicht senkrecht nach unten und kräftiges Zurücklehnen senkrecht gegen die Lehne.
+Die Stütze trägt bis 4,2 kN bei etwa sechsfacher Sicherheit gegen Knicken. Bei steiler Lehne zieht die Achse nach oben, deshalb sind die Gelenkplatten durch den Deckel auf eine Stahl-Gegenplatte geschraubt.
+Die Lehnenplatte ist mit zwei Eichenrippen versteift und biegt sich im ungünstigsten Fall um etwa 1,3 mm durch.
+
+**Grenzen:**
+
+- Flacher als 25° geht mit einer einzigen Klappstütze nicht, weil die Rast dann mit der Parkrast zusammenfiele. Eine 15°-Stellung bräuchte eine zweite, kurze Stütze (Option für später).
+- Der Sitz ist fest. Ein abnehmbarer Sitzkeil (ca. 10°) gegen Herunterrutschen bei steiler Lehne ist als Option vorgesehen.
+- Keine Negativ-Schräge und keine Langhantel-Ablage.
+
+![Schrägbank 45°](../renders/schraeg.png)
+
+## Was das Design hochwertig macht
+
+| Detail | Umsetzung |
+|---|---|
+| **Massivholz statt Platte** | Korpus aus 24 mm Eiche massiv. Deckel, Wangen und Boden sind auf Gehrung aus einem Brett geschnitten, sodass die Maserung ohne Unterbrechung um den Korpus läuft. Nirgends sind Hirnholz oder Plattenkanten zu sehen |
+| **Schwebender Korpus** | Der Sockel ist schwarz und 40 mm zurückgesetzt. Der Korpus scheint über dem Boden zu schweben |
+| **Lamellenfront** | Massive Eichenlamellen mit gerundeten Kanten auf verdeckten Traversen. Die 4-mm-Fugen lüften den Stauraum. Die Türen laufen in Nuten im Deckel und im Boden, ohne sichtbare Beschläge und ohne Griffe (man greift in die Fuge) |
+| **Polster mit Schattenfuge** | Die Lederpolster sind rundum 15 mm eingerückt und liegen auf einer 20 mm hohen schwarzen Schattenfuge. Rastleisten und Stütze verschwinden darin |
+| **Leder** | Vollnarbiges Rindleder (Cognac oder Schwarz) mit Kedernaht. Es ist abwischbar und schweißfest und gewinnt mit den Jahren an Patina. Alternative: hochwertiges Kunstleder |
+| **Reduziertes Metall** | Sichtbar sind nur die zwei Gelenkplatten mit Messingkappe. Rollen, Schrauben und Gegenplatten liegen verdeckt |
+| **Verdeckter Transport** | Die Rollen sitzen unter dem Korpusüberstand. Zum Verschieben das linke Ende ca. 17 cm anheben |
+| **Oberfläche** | Hartwachsöl. Man kann es ausbessern, es fühlt sich warm an, und es verträgt Schweiß und Wischen |
+
+### Farbvarianten
+
+| Eiche natur + Cognac-Leder + Schwarzstahl | Nussbaum + schwarzes Leder + Messing |
+|---|---|
+| ![Eiche](../renders/moebel.png) | ![Nussbaum](../renders/moebel_nussbaum.png) |
+
+Weitere sinnvolle Kombinationen: Räuchereiche + Cognac, Eiche weiß geölt + Sand/Greige-Leder.
+Im Modell umschaltbar mit `farbschema` in [cad/bank.scad](../cad/bank.scad).
+
+## Zielkonflikte und wie der Entwurf sie löst
 
 | Thema | Möbel will … | Training will … | Lösung |
 |---|---|---|---|
-| Polsterbreite | 40–45 cm, bequem | 28–32 cm, Schulterblätter frei beim Kurzhantel-Drücken | 40 cm als Kompromiss (Technogym 37,6 cm). Parameter `bank.tiefe` |
-| Polsterhärte | weich | fest, stabile Kante | Schichtaufbau: 30 mm hart (RG 50+) + 20 mm mittel (RG 35–40) |
-| Bezug | Stoff, Bouclé, Wolle | abwischbar, schweißfest | Kunstleder/Leder oder abwischbarer Möbelstoff (Outdoor-/Performance-Stoff). **Kein Bouclé.** |
-| Optik | geschlossene Front | schneller Zugriff | 2 Schiebetüren, 2 Fächer: Eine Tür zur Seite schieben, dann liegt ein ganzes Fach frei |
-| Feuchtigkeit | – | Schweiß, verschwitztes Zubehör | Lüftungsschlitze in den Türen, Hartwachsöl/Lack, Leim D3 |
-| Verschieben | soll beweglich sein | darf nicht rutschen | Gummipads unter den Füßen. Zum Bewegen an einem Ende ankippen und auf den Rollen schieben (wie Technogym) |
-
-### Grenzen
-
-- **Nur Flachbank, keine verstellbare Schrägbank.** Die Technogym Bench ist auch nur flach.
-  Eine klappbare Rückenlehne wäre eine mögliche Erweiterung in Phase 5.
-- **Kein Langhantel-Bankdrücken.** Dafür fehlt die Ablage, und dafür ist die Bank auch nicht gedacht.
-- **Keine Box Jumps auf das Polster.**
-
-## Übungen, die die Bank können muss
-
-Diese Liste dient als Prüfliste für Maße, Polster und Standfestigkeit.
-
-| Übung | Anforderung an die Bank |
-|---|---|
-| Kurzhantel-Bankdrücken, Fliegende | Polster fest, Breite ≤ 40 cm, Länge ≥ 110 cm |
-| Einarmiges Rudern | Knie und Hand stützen auf der Kante → Kante steif, Polster rutschfest |
-| Hip Thrust | Rücken drückt waagerecht gegen die Kante → Bank darf nicht wandern (Gewicht + Gummipads) |
-| Bulgarian Split Squat, Step-ups | Fuß steht auf der Kante → keine Kippgefahr, harter Schaum unten |
-| Dips, erhöhte Liegestütze | Hände auf der Kante → Kante steif |
-| Sitzendes Schulterdrücken, Bizeps-Curls | Sitzhöhe 45 cm |
-| Crunches, Beinheben | Länge 120 cm |
+| Polsterbreite | breit, bequem | 26–32 cm, Schulterblätter frei | 37 cm (wie Technogym), Korpus trotzdem 40 cm |
+| Polsterhärte | weich | fest, stabile Kante | 30 mm hart (RG 50+) + 20 mm mittel (RG 35–40), Watte für weiche Kanten |
+| Lehne | durchgehende Sitzfläche | verstellbar | Fuge nur 25 mm. Die Lehne liegt flach bündig mit dem Sitz, die Mechanik ist unsichtbar |
+| Bezug | Stoff, Wolle | abwischbar, schweißfest | Leder. **Kein Bouclé** |
+| Stauraum | geschlossene Front | schneller Zugriff | 2 Schiebetüren, 2 Fächer. Eine Tür zur Seite, und ein ganzes Fach ist frei |
+| Feuchtigkeit | – | verschwitztes Zubehör | Lamellenfugen lüften, Hartwachsöl, Leim D3 |
+| Verschieben | soll beweglich sein | darf nicht rutschen | Gummipads unter dem Sockel. Rollen verdeckt, sie greifen nur beim Ankippen |
 
 ## Aufbau
 
@@ -64,15 +102,17 @@ Diese Liste dient als Prüfliste für Maße, Polster und Standfestigkeit.
 
 | Bauteil | Funktion |
 |---|---|
-| **Polster** | 15 mm Trägerplatte + 50 mm Schaum + Bezug. Liegt auf 4 Zentrierbolzen und ist abnehmbar. Optional von unten mit Sterngriffschrauben gesichert |
-| **Deckel** | 18 mm, liegt **auf** den Seitenwangen. Die Last geht so direkt über Druck in die Wangen, nicht über Leimfugen |
-| **Seitenwangen** | stehen auf dem Boden (Füße vorne und hinten). Links ein Griffloch zum Ankippen |
-| **Rückwand** | verleimt, steift den Kasten gegen seitliches Verschieben aus (Rudern, Hip Thrust) |
-| **Führungsleiste (Buche)** | unter dem Deckel vorne. Trägt die oberen Laufnuten der Türen und versteift die Vorderkante |
-| **Mittelwand + Fachböden** | 2 Fächer mit je 2 Ebenen. Schweres unten. Fachböden liegen auf Bodenträgern und sind mit Filz/Kork belegt |
-| **Schiebetüren** | 12 mm, mit Lüftungsschlitzen. Zum Einsetzen in die obere Nut hochschieben und unten absetzen; keine Beschläge nötig |
-| **Boden + Sockelblenden** | Boden mit unteren Laufnuten. Die vordere Blende ist zurückgesetzt, damit die Fersen beim Sitzen Platz haben |
-| **Rollen** | 2 Stück an der rechten Stirnseite, 4 mm über dem Boden. Sie greifen erst, wenn man links anhebt |
+| **Sitz** | 340 mm, fest. Mit 4 Schrauben von unten durch Deckel und Distanzrahmen in Einschlagmuttern der Sitzplatte |
+| **Rückenlehne** | 805 mm. 18 mm Polsterplatte mit 2 verleimten Eichenrippen, Unterseite furniert |
+| **Gelenkplatten** | Je 2 außen (Korpus) und innen (Lehne), Bolzen M10 mit Gleitlagerbuchse |
+| **Klappstütze** | 2 Beine Flachstahl 25 × 8 mm, Querstab Ø 12 mm, Lagerböcke an den Rippen |
+| **Rastleisten** | 2 × Eiche schwarz, auf den Deckel geleimt. 6 Arbeitsrasten (8 mm tief) + Parkrast (12 mm). Sie versteifen zugleich die Vorderkante |
+| **Deckel, Boden, Wangen** | Eiche massiv 24 mm, Gehrung mit Domino. Laufnuten für die Türen in Deckel und Boden |
+| **Rückwand** | Multiplex eichefurniert, in Nut verleimt. Steift den Kasten aus |
+| **Mittelwand, Fachböden** | 2 Fächer mit je 2 Ebenen. Unten 140 mm für die schweren Hanteln. Ablagen mit Filz oder Leder belegt |
+| **Schiebetüren** | Je 27 Eichenlamellen auf 2 verdeckten Traversen |
+| **Sockel** | Schwarz gebeizter Rahmen, 40 mm zurückgesetzt, mit Antirutschpads |
+| **Rollen** | 2 × Ø 30 mm, verdeckt unter dem rechten Überstand |
 
 Stauraum mit dem Technogym-Inventar (Hantelmaße geschätzt, siehe [berechnung.md](berechnung.md)):
 
@@ -82,24 +122,27 @@ Stauraum mit dem Technogym-Inventar (Hantelmaße geschätzt, siehe [berechnung.m
 
 | Option | Optik | Vorteile | Nachteile |
 |---|---|---|---|
-| **Birke Multiplex 18 mm** (Standard im Modell) | hell, sichtbare Schichtkanten, skandinavisch | formstabil, sehr fest, einfach zu verarbeiten | Kanten muss man mögen |
-| Eiche-furniertes Multiplex/MDF + Anleimer | wie Massivholz | edel, formstabil | Anleimer an allen sichtbaren Kanten nötig, teurer |
-| Eiche massiv (Leimholz) | klassisch | sehr wertig | arbeitet quer zur Faser (bei 40 cm Breite 2–3 mm), aufwendigere Konstruktion, teuer |
-| Lackiertes MDF | farbig, grifflos-modern | günstig, glatt | schwer, empfindliche Kanten, schlechte Schraubhaltung |
+| **Eiche massiv 24 mm** (Standard) | warm, lebendige Maserung | wertig, ausbesserbar, Gehrung mit umlaufender Maserung möglich | arbeitet quer zur Faser (bei 40 cm Tiefe ca. 2–3 mm). Alle Teile sind so ausgerichtet, dass sie in dieselbe Richtung arbeiten |
+| Nussbaum massiv | dunkel, edel | sehr hochwertig, schöne Maserung | teurer (ca. 1,5–2 × Eiche) |
+| Räuchereiche | dunkelbraun, gleichmäßig | modern, passt zu Cognac-Leder | teurer, Farbe von Brett zu Brett leicht verschieden |
+| Eichefurnier auf Multiplex + Massivkanten | wie Massivholz | formstabil, günstiger | Kanten müssen angeleimt werden, Gehrung mit umlaufender Maserung nur mit Furnierbild |
 
 ## Fertigung
 
-- **Selbst bauen:** Tauch- oder Tischkreissäge, Oberfräse (Nuten, Schlitze, Griffloch), Dübel- oder Dominofräse, Zwingen.
-- **Zuschnitt bestellen:** Holzhandel oder Online-Zuschnitt nach der [Stückliste](stueckliste.md); Nuten und Schlitze selbst fräsen.
-- **CNC-Service/Schreiner:** Das parametrische Modell lässt sich als DXF für den CNC-Zuschnitt exportieren (Phase 2).
+Bei diesem Anspruch würde ich die Arbeit aufteilen:
+
+- **Korpus und Türen:** Schreinerei oder gut ausgestattete eigene Werkstatt. Saubere Gehrungen über 40 cm brauchen eine Formatkreissäge oder eine präzise Tauchsäge mit Schiene und Domino.
+- **Polster:** Polsterei. Leder mit Kedernaht sieht nur mit Erfahrung wirklich gut aus.
+- **Stahlteile:** Laserzuschnitt-Dienst plus Pulverbeschichtung, oder Messing beim Metallbauer. Die Zeichnungen dafür entstehen in Phase 2.
+- **Rastleisten, Rippen, Sockel:** einfach und gut selbst machbar.
 
 ## Referenz: Technogym Bench
 
-Daten laut Händlerangaben (Technogym selbst war beim Abruf nicht erreichbar):
+Daten laut Händlerangaben (die Technogym-Seite war beim Abruf nicht erreichbar):
 
 - 1129 × 376 × 455 mm, leer 35,2 kg, mit Zubehör 98,8 kg, max. Nutzergewicht 120 kg
 - Zubehör: 5 Paar Kurzhanteln (2,5 / 3,5 / 5 / 7,5 / 10 kg), 3 Widerstandsbänder, 3 Paar Knuckles (0,45 / 0,8 / 1,2 kg), Trainingsmatte
-- Halterungen mit Abstandshaltern gegen eingeklemmte Finger, Rollen an einer Stirnseite
+- nur Flachbank, Halterungen mit Abstandshaltern gegen eingeklemmte Finger, Rollen an einer Stirnseite
 
 Quellen: [Winnings](https://www.winnings.com.au/p/technogym-multifunctional-bench-dgy100),
 [Northern Fitness](https://www.northernfitness.ca/products/technogym-bench),

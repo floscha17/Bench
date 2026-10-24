@@ -1,63 +1,78 @@
 # Zentrale Parameter der Bank – einzige Quelle für Maße.
 # Nach jeder Änderung:  python3 tools/build.py
 # Das erzeugt cad/params.scad, die Stückliste, die Berechnung und die Renderings neu.
-# Alle Maße in mm, Gewichte in kg.
+# Alle Maße in mm, Gewichte in kg, Winkel in Grad.
 
 [bank]
 laenge = 1200   # Länge außen
-tiefe  = 400    # Tiefe außen (= Polsterbreite)
+tiefe  = 400    # Tiefe außen
 hoehe  = 450    # Oberkante Polster: Sitzhöhe und Trainingshöhe zugleich
 
 [material]
-platte          = 18     # Korpus: Birke Multiplex 18 mm
-tuer            = 12     # Schiebetüren: Birke Multiplex 12 mm
-dichte_platte   = 680    # kg/m³ Birke Multiplex
-dichte_leiste   = 720    # kg/m³ Buche massiv
-preis_m2_18     = 75     # €/m², grobe Schätzung Zuschnitt Baumarkt/Holzhandel
-preis_m2_12     = 60     # €/m²
-E_hochkant      = 6000   # N/mm², Multiplex hochkant belastet (konservativ)
-E_flach         = 7000   # N/mm², Multiplex flach belastet (konservativ)
-E_leiste        = 12000  # N/mm², Buche massiv in Faserrichtung
+aussen          = 24     # Korpus außen: Eiche massiv, Ecken auf Gehrung mit umlaufender Maserung
+innen           = 18     # Mittelwand, Fachböden: eichefurniertes Multiplex
+rueckwand       = 10     # Rückwand: eichefurniertes Multiplex, in Nut
+dichte_massiv   = 690    # kg/m³ Eiche
+dichte_platte   = 680    # kg/m³ Multiplex
+preis_massiv_m2 = 190    # €/m² Eiche-Leimholz 24 mm, durchgehende Lamelle (Schätzung)
+preis_platte_m2 = 95     # €/m² eichefurniertes Multiplex 18 mm (Schätzung)
+E_massiv        = 11000  # N/mm², Eiche in Faserrichtung
+E_platte        = 7000   # N/mm², Multiplex flach belastet (konservativ)
 
 [polster]
-platte = 15     # Trägerplatte Multiplex
-schaum = 50     # Schaumstoff gesamt (z. B. 30 mm hart + 20 mm mittel)
-radius = 12     # Kantenrundung des Polsters
+platte       = 18     # Trägerplatte Multiplex (Lehne zusätzlich mit 2 Eichenrippen)
+schaum       = 50     # 30 mm hart (RG 50+) + 20 mm mittel (RG 35–40)
+radius       = 12     # Kantenrundung
+einzug       = 15     # Polster rundum gegenüber dem Korpus eingerückt
+schattenfuge = 20     # Luft zwischen Deckel und Polster (Platz für Rastleisten und Stütze)
+sitz_laenge  = 340    # fester Sitz am linken Ende
+fuge         = 25     # zwischen Sitz und Rückenlehne
+
+[schraegbank]
+winkel           = [25, 35, 45, 60, 75, 85]  # Raststellungen; 0° = flach (Parkstellung)
+achse_unter_oberkante = 25   # Drehachse liegt so weit unter der Polsteroberfläche
+stuetze_abstand  = 370       # Gelenk der Stütze an der Lehnenunterseite, ab Drehachse
+stuetze_laenge   = 410       # Gelenk bis Mitte Querstab
+stuetze_versatz  = 6         # Gelenkpunkt unter der Lehnenplatte
+buegel_d         = 12        # Querstab der Stütze (Stahl rund)
+rast_tiefe       = 8         # Tiefe der Arbeitsrasten
+leiste_breite    = 30
+leiste_einzug    = 25        # Rastleiste innen vom Polsterrand
+min_rastabstand  = 30        # Mindestabstand zwischen zwei Rasten (Steg)
+gelenkplatte     = 5         # Stahlplatte, schwarz pulverbeschichtet oder Messing
+bein_breite      = 25        # Stützenbeine Flachstahl: Breite quer zur Bank
+bein_dicke       = 8         # Dicke in der Klappebene (passt flach in die Schattenfuge)
+rippe_breite     = 30        # 2 Eichenrippen unter der Lehnenplatte
+rippe_hoehe      = 18
+last_anteil      = 0.7       # Anteil des Körpergewichts auf der Lehne
+last_abstand     = 350       # Lastschwerpunkt auf der Lehne, ab Drehachse
 
 [korpus]
-fuss_hoehe     = 40    # Ausschnitt unten in den Seitenwangen
-fuss_breite    = 60    # Breite der Füße vorne/hinten
-sockel_versatz = 30    # Rücksprung der vorderen Sockelblende
-mittelwaende   = 1     # Anzahl senkrechter Trennwände (1 = zwei Fächer, passend zu zwei Türen)
-fachboden      = true  # Zwischenboden in jedem Fach
+sockel_hoehe   = 40    # schwarzer, zurückgesetzter Sockel: Korpus „schwebt“
+sockel_einzug  = 40
+mittelwaende   = 1     # 1 = zwei Fächer, passend zu zwei Schiebetüren
+fachboden      = true
+fach_unten     = 140   # lichte Höhe der unteren Ebene (schwere Hanteln)
 
 [tueren]
-anzahl          = 2     # Schiebetüren auf zwei Laufspuren
+anzahl          = 2
 ueberlappung    = 40
-nut_unten       = 5     # Nuttiefe im Boden
-nut_oben        = 14    # Nuttiefe in der Führungsleiste (zum Einhängen)
-nut_breite      = 13    # 12 mm Tür + 1 mm Luft
-leiste_hoehe    = 25    # Führungsleiste Buche unter dem Deckel (sichtbar vorne)
-leiste_tiefe    = 50
-schlitz_breite  = 8     # Lüftungs-/Griffschlitze in den Türen
-schlitz_abstand = 30
-schlitz_rand    = 35
+lamelle_breite  = 18   # Eiche-Lamellen, Fugen dienen als Lüftung
+lamelle_fuge    = 4
+lamelle_dicke   = 14
+traverse_dicke  = 6    # verdeckte Querleisten hinter den Lamellen
+spur_luft       = 3
+nut_oben        = 10   # Führungsnut im Deckel für die Traversenfeder (Tür zum Einsetzen hochschieben)
 
 [rollen]
-aktiv         = true  # Transportrollen an der rechten Stirnseite (wie Technogym)
-durchmesser   = 50
-breite        = 18
-bodenfreiheit = 4     # Rollen berühren den Boden erst beim Ankippen
-
-[griff]
-breite      = 120     # Griffloch in der linken Seitenwange zum Ankippen
-hoehe       = 30
-abstand_oben = 30
+aktiv         = true   # verdeckt unter dem Korpusüberstand am rechten Ende
+durchmesser   = 30
+breite        = 15
+bodenfreiheit = 3      # Rollen greifen erst beim Ankippen
 
 [last]
-nutzer_kg   = 120     # max. Nutzergewicht (wie Technogym)
-dynamik     = 1.5     # Stoßfaktor für Hinsetzen/Übungen
-anteil_front = 0.5    # Anteil, den die vordere Kante allein trägt
+nutzer_kg    = 120     # max. Nutzergewicht (wie Technogym)
+dynamik      = 1.5     # Stoßfaktor für Hinsetzen/Übungen
 
 # Stauraum-Inventar. Maße der Hanteln sind SCHÄTZWERTE für Hex-Kurzhanteln –
 # bitte an den echten Hanteln nachmessen und hier eintragen.

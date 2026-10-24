@@ -2,8 +2,8 @@
 """Erzeugt aus params.toml alle abgeleiteten Dateien der Bank.
 
 - cad/params.scad       Parameter + abgeleitete Maße für das OpenSCAD-Modell
-- docs/stueckliste.md   Zuschnittliste, Beschläge, Gewicht, grobe Kosten
-- docs/berechnung.md    Stauraum-Belegung, Durchbiegung, Kippsicherheit
+- docs/stueckliste.md   Zuschnittliste, Metallteile, Beschläge, Gewicht, grobe Kosten
+- docs/berechnung.md    Schrägbank-Rasten, Stauraum, Durchbiegung, Kippsicherheit
 - renders/*.png         Ansichten (nur wenn OpenSCAD installiert ist)
 
 Aufruf:  python3 tools/build.py [--no-render]
@@ -18,6 +18,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 G = 9.81
+E_STAHL = 210000
 
 
 def load_params():
@@ -27,58 +28,61 @@ def load_params():
 
 def derive(p):
     """Alle abgeleiteten Maße an einer Stelle – SCAD und Doku nutzen dieselben Werte."""
-    b, m, po, k, tu = p["bank"], p["material"], p["polster"], p["korpus"], p["tueren"]
+    b, m, po, sb, k, tu = (p["bank"], p["material"], p["polster"], p["schraegbank"],
+                           p["korpus"], p["tueren"])
     L, D, H = b["laenge"], b["tiefe"], b["hoehe"]
-    t = m["platte"]
-    d = {"L": L, "D": D, "H": H, "t": t, "tt": m["tuer"]}
+    t, ti, tr = m["aussen"], m["innen"], m["rueckwand"]
+    d = {"L": L, "D": D, "H": H, "t": t, "ti": ti, "tr": tr}
 
-    d["polster_h"] = po["platte"] + po["schaum"]
-    d["deckel_z1"] = H - d["polster_h"]
+    # Höhenaufbau von oben: Polster → Schattenfuge → Deckel → Fächer → Boden → Sockel
+    P = po["platte"] + po["schaum"]
+    d["polster_h"] = P
+    d["polster_z0"] = H - P
+    d["deckel_z1"] = d["polster_z0"] - po["schattenfuge"]
     d["deckel_z0"] = d["deckel_z1"] - t
-    d["seite_h"] = d["deckel_z0"]
-    d["boden_z0"] = k["fuss_hoehe"]
-    d["boden_z1"] = k["fuss_hoehe"] + t
+    d["boden_z0"] = k["sockel_hoehe"]
+    d["boden_z1"] = d["boden_z0"] + t
+    d["korpus_h"] = d["deckel_z1"] - d["boden_z0"]
     d["innen_l"] = L - 2 * t
     d["innen_h"] = d["deckel_z0"] - d["boden_z1"]
-    d["leiste_z0"] = d["deckel_z0"] - tu["leiste_hoehe"]
-    d["rueck_y0"] = D - t
-    d["fach_y0"] = tu["leiste_tiefe"]
+
+    # Polster: fester Sitz links, Rückenlehne rechts, rundum eingerückt
+    e = po["einzug"]
+    d["pad_y0"], d["pad_b"] = e, D - 2 * e
+    d["sitz_x0"], d["sitz_x1"] = e, e + po["sitz_laenge"]
+    d["lehne_x0"] = d["sitz_x1"] + po["fuge"]
+    d["lehne_x1"] = L - e
+    d["lehne_l"] = d["lehne_x1"] - d["lehne_x0"]
+
+    # Schiebetüren aus Lamellen, zwei Laufspuren
+    tt = tu["lamelle_dicke"] + tu["traverse_dicke"]
+    d["tuer_t"] = tt
+    d["tuer_y0"] = [2, 2 + tt + tu["spur_luft"]]
+    d["fach_y0"] = d["tuer_y0"][1] + tt + tu["spur_luft"]
+    d["rueck_y0"] = D - 10 - tr
     d["fach_tiefe"] = d["rueck_y0"] - d["fach_y0"]
-
-    n_mw = k["mittelwaende"]
-    d["n_mw"] = n_mw
-    d["n_fach"] = n_mw + 1
-    d["fach_breite"] = (d["innen_l"] - n_mw * t) / d["n_fach"]
-    d["fach_x0"] = [t + i * (d["fach_breite"] + t) for i in range(d["n_fach"])]
-
-    if k["fachboden"]:
-        d["zelle_h"] = (d["innen_h"] - t) / 2
-        d["fachboden_z0"] = d["boden_z1"] + d["zelle_h"]
-        d["fachboden_z1"] = d["fachboden_z0"] + t
-    else:
-        d["zelle_h"] = d["innen_h"]
-        d["fachboden_z0"] = d["fachboden_z1"] = None
-
-    # Laufspuren: von hinten aus der Führungsleiste heraus gerechnet, Stege je 3 mm
-    nb, steg = tu["nut_breite"], 3
-    spur2_y0 = tu["leiste_tiefe"] - steg - nb
-    spur1_y0 = spur2_y0 - steg - nb
-    d["spur_y0"] = [spur1_y0, spur2_y0]
-    d["nut_breite"] = nb
-    luft = (nb - m["tuer"]) / 2
-    d["tuer_y0"] = [spur1_y0 + luft, spur2_y0 + luft]
-
-    oeffnung = d["leiste_z0"] - d["boden_z1"]
-    eintauchen_oben = tu["nut_oben"] - tu["nut_unten"] - 2   # Einhängen: hochschieben, unten einsetzen
-    d["tuer_oeffnung"] = oeffnung
-    d["tuer_h"] = oeffnung + tu["nut_unten"] + eintauchen_oben
-    d["tuer_z0"] = d["boden_z1"] - tu["nut_unten"]
     n_t = tu["anzahl"]
     d["n_tuer"] = n_t
     d["tuer_l"] = (d["innen_l"] + (n_t - 1) * tu["ueberlappung"]) / n_t
     d["tuer_x0"] = [t + i * (d["tuer_l"] - tu["ueberlappung"]) for i in range(n_t)]
+    d["tuer_z0"] = d["boden_z1"] + 1
+    # Lamellen reichen bis 2 mm unter den Deckel; oben führt eine Feder der Traverse in einer Deckelnut
+    d["tuer_h"] = d["deckel_z0"] - 2 - d["tuer_z0"]
+    n_lam = round((d["tuer_l"] + tu["lamelle_fuge"]) / (tu["lamelle_breite"] + tu["lamelle_fuge"]))
+    d["n_lamellen"] = n_lam
+    d["lamelle_b"] = (d["tuer_l"] - (n_lam - 1) * tu["lamelle_fuge"]) / n_lam
 
-    # Zugangshöhe je Zelle: oben begrenzt durch Fachboden bzw. Führungsleiste
+    # Fächer
+    n_mw = k["mittelwaende"]
+    d["n_mw"], d["n_fach"] = n_mw, n_mw + 1
+    d["fach_breite"] = (d["innen_l"] - n_mw * ti) / d["n_fach"]
+    d["fach_x0"] = [t + i * (d["fach_breite"] + ti) for i in range(d["n_fach"])]
+    if k["fachboden"]:
+        d["fachboden_z0"] = d["boden_z1"] + k["fach_unten"]
+        d["fachboden_z1"] = d["fachboden_z0"] + ti
+    else:
+        d["fachboden_z0"] = d["fachboden_z1"] = None
+
     zellen = []
     for i, x0 in enumerate(d["fach_x0"]):
         if k["fachboden"]:
@@ -90,13 +94,78 @@ def derive(p):
             zellen.append({
                 "name": f"Fach {i + 1} {ebene}".strip(),
                 "fach": i, "ebene": ebene, "x0": x0, "z0": z0,
-                "h": z1 - z0, "zugang": min(z1, d["leiste_z0"]) - z0,
+                "h": z1 - z0, "zugang": z1 - z0,
                 "breite": d["fach_breite"], "tiefe": d["fach_tiefe"],
             })
-    # Schweres nach unten: erst alle unteren Zellen, dann die oberen
     zellen.sort(key=lambda z: (z["ebene"] == "oben", z["fach"]))
     d["zellen"] = zellen
+
+    # Schrägbank: Drehachse an der Vorderkante der Lehne, knapp unter der Oberfläche
+    d["achse_x"] = d["lehne_x0"]
+    d["achse_z"] = H - sb["achse_unter_oberkante"]
+    d["vA"] = -(P - sb["achse_unter_oberkante"]) - sb["stuetze_versatz"]
+    r = sb["buegel_d"] / 2
+    d["rast_z"] = d["polster_z0"] - sb["rast_tiefe"] + r - d["achse_z"]
+    d["park_tiefe"] = d["polster_z0"] - (d["achse_z"] + d["vA"]) + r
+    lb, le = sb["leiste_breite"], sb["leiste_einzug"]
+    d["leiste_y0"] = [e + le, D - e - le - lb]
+    d["leiste_x0"] = d["achse_x"] + 40
+    d["leiste_x1"] = d["lehne_x1"] - 10
+    d["bein_y0"] = [d["leiste_y0"][0] + lb + 2, d["leiste_y0"][1] - 2 - sb["bein_breite"]]
+    d["stab_y0"] = d["leiste_y0"][0] + 5
+    d["stab_l"] = d["leiste_y0"][1] + lb - 5 - d["stab_y0"]
+    rippe_y = d["bein_y0"][0] + sb["bein_breite"] + 25
+    d["rippe_y0"] = [rippe_y, D - rippe_y - sb["rippe_breite"]]
+    d["rippe_l"] = sb["stuetze_abstand"] + sb["stuetze_laenge"] - 25 - 20
     return d
+
+
+def rasten(p, d):
+    """Raststellungen der Stütze: Position je Winkel, Stützkraft, Achskraft."""
+    sb, last = p["schraegbank"], p["last"]
+    s, l = sb["stuetze_abstand"], sb["stuetze_laenge"]
+    vA, zN = d["vA"], d["rast_z"]
+    F_last = sb["last_anteil"] * last["nutzer_kg"] * G * last["dynamik"]
+    out = []
+    for a in sb["winkel"]:
+        r = math.radians(a)
+        Ax = s * math.cos(r) - vA * math.sin(r)
+        Az = s * math.sin(r) + vA * math.cos(r)
+        dz = Az - zN
+        if dz >= l:
+            out.append({"winkel": a, "ok": False})
+            continue
+        n = Ax + math.sqrt(l * l - dz * dz)
+        ux, uz = (Ax - n) / l, dz / l             # Richtung Rast → Gelenk (Druckstab)
+        hebel = Ax * uz - Az * ux
+        # Lastfall 1: Gewicht senkrecht nach unten; Lastfall 2: Last senkrecht auf die Lehnenfläche
+        # (Zurücklehnen, Drücken). Ausgegeben wird jeweils der ungünstigere Fall.
+        lastfaelle = [
+            ((0.0, -F_last), F_last * (sb["last_abstand"] * math.cos(r) - sb["achse_unter_oberkante"] * math.sin(r))),
+            ((F_last * math.sin(r), -F_last * math.cos(r)), F_last * sb["last_abstand"]),
+        ]
+        F, R = 0.0, 0.0
+        for (Lx, Lz), M in lastfaelle:
+            Fi = M / hebel
+            F = max(F, Fi)
+            R = max(R, math.hypot(-Fi * ux - Lx, -Fi * uz - Lz))
+        out.append({"winkel": a, "ok": True, "n": n, "F": F, "R": R,
+                    "neigung": math.degrees(math.atan2(uz, -ux))})
+    park = s + l
+    return out, park, F_last
+
+
+def pruefe_rasten(p, d, rs, park):
+    sb = p["schraegbank"]
+    fehler = [f"{r['winkel']}°: Stütze zu kurz" for r in rs if not r["ok"]]
+    pos = sorted([r["n"] for r in rs if r["ok"]] + [park])
+    lo, hi = d["leiste_x0"] - d["achse_x"] + 10, d["leiste_x1"] - d["achse_x"] - 10
+    if pos and (pos[0] < lo or pos[-1] > hi):
+        fehler.append(f"Rasten außerhalb der Leiste ({fmt(pos[0], 0)}–{fmt(pos[-1], 0)} mm, erlaubt {fmt(lo, 0)}–{fmt(hi, 0)} mm)")
+    abst = min((b_ - a_ for a_, b_ in zip(pos, pos[1:])), default=999)
+    if abst < sb["min_rastabstand"]:
+        fehler.append(f"Rasten zu dicht ({fmt(abst, 0)} mm < {sb['min_rastabstand']} mm)")
+    return fehler, abst
 
 
 def pack(p, d):
@@ -141,227 +210,246 @@ def scad_value(v):
     return str(v)
 
 
-def write_scad(p, d, platz):
-    k, tu, r, g, po = p["korpus"], p["tueren"], p["rollen"], p["griff"], p["polster"]
-    werte = {
-        "L": d["L"], "D": d["D"], "H": d["H"], "t": d["t"], "tt": d["tt"],
-        "polster_platte": po["platte"], "polster_schaum": po["schaum"], "polster_r": po["radius"],
-        "deckel_z0": d["deckel_z0"], "deckel_z1": d["deckel_z1"], "seite_h": d["seite_h"],
-        "boden_z0": d["boden_z0"], "boden_z1": d["boden_z1"],
-        "innen_l": d["innen_l"], "innen_h": d["innen_h"],
-        "fuss_h": k["fuss_hoehe"], "fuss_b": k["fuss_breite"], "sockel_versatz": k["sockel_versatz"],
-        "leiste_h": tu["leiste_hoehe"], "leiste_t": tu["leiste_tiefe"], "leiste_z0": d["leiste_z0"],
-        "nut_breite": d["nut_breite"], "nut_oben": tu["nut_oben"], "nut_unten": tu["nut_unten"],
-        "spur_y0": d["spur_y0"],
-        "rueck_y0": d["rueck_y0"], "fach_y0": d["fach_y0"], "fach_tiefe": d["fach_tiefe"],
-        "fach_breite": d["fach_breite"], "fach_x0": d["fach_x0"], "n_mw": d["n_mw"],
+def write_scad(p, d, platz, rs, park):
+    k, tu, r, po, sb = p["korpus"], p["tueren"], p["rollen"], p["polster"], p["schraegbank"]
+    werte = {k_: d[k_] for k_ in (
+        "L", "D", "H", "t", "ti", "tr", "polster_h", "polster_z0", "deckel_z0", "deckel_z1",
+        "boden_z0", "boden_z1", "korpus_h", "innen_l", "innen_h",
+        "pad_y0", "pad_b", "sitz_x0", "sitz_x1", "lehne_x0", "lehne_x1", "lehne_l",
+        "tuer_t", "tuer_y0", "fach_y0", "rueck_y0", "fach_tiefe", "tuer_l", "tuer_x0", "tuer_z0",
+        "tuer_h", "n_lamellen", "lamelle_b", "n_mw", "fach_breite", "fach_x0",
+        "achse_x", "achse_z", "vA", "rast_z", "park_tiefe", "leiste_y0", "leiste_x0", "leiste_x1",
+        "bein_y0", "stab_y0", "stab_l", "rippe_y0", "rippe_l")}
+    werte.update({
+        "polster_platte": po["platte"], "polster_r": po["radius"], "schattenfuge": po["schattenfuge"],
+        "sockel_h": k["sockel_hoehe"], "sockel_einzug": k["sockel_einzug"],
         "fachboden": k["fachboden"],
         "fachboden_z0": d["fachboden_z0"] or 0, "fachboden_z1": d["fachboden_z1"] or 0,
-        "tuer_x0": d["tuer_x0"], "tuer_y0": d["tuer_y0"], "tuer_l": d["tuer_l"],
-        "tuer_h": d["tuer_h"], "tuer_z0": d["tuer_z0"],
-        "schlitz_b": tu["schlitz_breite"], "schlitz_abst": tu["schlitz_abstand"],
-        "schlitz_rand": tu["schlitz_rand"],
+        "lamelle_fuge": tu["lamelle_fuge"], "lamelle_dicke": tu["lamelle_dicke"],
+        "traverse_dicke": tu["traverse_dicke"],
+        "stuetze_s": sb["stuetze_abstand"], "stuetze_l": sb["stuetze_laenge"],
+        "buegel_d": sb["buegel_d"], "rast_tiefe": sb["rast_tiefe"], "leiste_b": sb["leiste_breite"],
+        "bein_b": sb["bein_breite"], "bein_t": sb["bein_dicke"],
+        "rippe_b": sb["rippe_breite"], "rippe_h": sb["rippe_hoehe"],
+        "gelenkplatte": sb["gelenkplatte"],
+        "winkel": sb["winkel"],
+        "rasten": [r_["n"] for r_ in rs if r_["ok"]], "park": park,
         "rollen": r["aktiv"], "rolle_d": r["durchmesser"], "rolle_b": r["breite"],
         "rolle_luft": r["bodenfreiheit"],
-        "griff_b": g["breite"], "griff_h": g["hoehe"], "griff_oben": g["abstand_oben"],
         # [typ, x, y, z, breite, hoehe, tiefe, kopf]
         "inhalt": [[i["typ"], i["x"], i["y"], i["z"], i["w"], i["h"], i["d"], i.get("kopf", 0)]
                    for i in platz],
         "abstand": p["inventar"]["abstand"],
-    }
+    })
     lines = ["// AUTOMATISCH ERZEUGT von tools/build.py aus params.toml – nicht von Hand ändern.", ""]
     lines += [f"{k_} = {scad_value(v)};" for k_, v in werte.items()]
     (ROOT / "cad" / "params.scad").write_text("\n".join(lines) + "\n")
 
 
 def teile(p, d):
-    """Zuschnittliste: (Bezeichnung, Anzahl, Länge, Breite, Dicke, Material, Hinweis, Abzug_mm2)."""
-    t, tt, k, tu, g = d["t"], d["tt"], p["korpus"], p["tueren"], p["griff"]
-    fuss_ausschnitt = (d["D"] - 2 * k["fuss_breite"]) * k["fuss_hoehe"]
-    griff = g["breite"] * g["hoehe"]
-    n_schlitze = schlitze_pro_tuer(p, d)
-    schlitz_flaeche = n_schlitze * tu["schlitz_breite"] * (d["tuer_h"] - 2 * tu["schlitz_rand"])
-    liste = [
-        ("Seitenwange", 2, d["D"], d["seite_h"], t, "Birke Multiplex",
-         f"Fußausschnitt {d['D'] - 2 * k['fuss_breite']}×{k['fuss_hoehe']}; links Griffloch {g['breite']}×{g['hoehe']}",
-         fuss_ausschnitt + griff / 2),
-        ("Deckel", 1, d["L"], d["D"], t, "Birke Multiplex", "liegt auf den Wangen auf", 0),
-        ("Boden", 1, d["innen_l"], d["D"], t, "Birke Multiplex",
-         f"2 Laufnuten {d['nut_breite']}×{tu['nut_unten']}", 0),
-        ("Rückwand", 1, d["innen_l"], d["innen_h"], t, "Birke Multiplex", "tragend, verleimt", 0),
-        ("Sockelblende", 2, d["innen_l"], k["fuss_hoehe"], t, "Birke Multiplex",
-         f"vorne {k['sockel_versatz']} mm zurückgesetzt, hinten bündig", 0),
+    """Zuschnittliste: (Gruppe, Bezeichnung, Anzahl, Länge, Breite, Dicke, Hinweis)."""
+    t, ti, tr = d["t"], d["ti"], d["tr"]
+    k, tu, po, sb = p["korpus"], p["tueren"], p["polster"], p["schraegbank"]
+    se, sh = k["sockel_einzug"], k["sockel_hoehe"]
+    sf = po["schattenfuge"]
+    massiv, platte, metall = "Eiche massiv", "Multiplex eichefurniert", "Stahl"
+    return [
+        (massiv, "Deckel", 1, d["L"], d["D"], t, "Gehrung links/rechts, Nut für Rückwand"),
+        (massiv, "Boden", 1, d["L"], d["D"], t, "Gehrung links/rechts, Laufnuten, Nut für Rückwand"),
+        (massiv, "Seitenwange", 2, d["korpus_h"], d["D"], t, "Gehrung oben/unten – alle 4 aus einem Brett für umlaufende Maserung"),
+        (massiv, "Türlamelle", d["n_tuer"] * d["n_lamellen"], d["tuer_h"], round(d["lamelle_b"], 1), tu["lamelle_dicke"], "Vorderkanten gerundet R3"),
+        (massiv, "Türtraverse", 2 * d["n_tuer"], round(d["tuer_l"], 1), 40, tu["traverse_dicke"], f"verdeckt hinter den Lamellen, obere mit {tu['nut_oben']} mm Feder"),
+        (massiv, "Rastleiste", 2, d["leiste_x1"] - d["leiste_x0"], sb["leiste_breite"], sf, f"schwarz gebeizt, mit dem Deckel verleimt, {len(sb['winkel'])} Rasten + Parkrast"),
+        (massiv, "Lehnenrippe", 2, d["rippe_l"], sb["rippe_breite"], sb["rippe_hoehe"], "unter der Lehnenplatte verleimt"),
+        (massiv, "Sitz-Distanzleiste", 4, po["sitz_laenge"] - 50, 20, sf, "schwarz gebeizt, mit dem Deckel verleimt (versteift die Vorderkante)"),
+        (massiv, "Sockel längs", 2, d["L"] - 2 * se, sh, t, "schwarz gebeizt"),
+        (massiv, "Sockel quer", 2, d["D"] - 2 * se - 2 * t, sh, t, "schwarz gebeizt"),
+        (platte, "Mittelwand", d["n_mw"], d["fach_tiefe"], d["innen_h"], ti, "Bohrreihe für Bodenträger"),
+        (platte, "Fachboden", d["n_fach"] if k["fachboden"] else 0, round(d["fach_breite"] - 2, 1), d["fach_tiefe"] - 5, ti, "Oberseite Filz/Leder"),
+        (platte, "Rückwand", 1, d["innen_l"] + 20, d["innen_h"] + 20, tr, "in Nut, verleimt (steift aus)"),
+        (platte, "Sitzplatte", 1, po["sitz_laenge"], d["pad_b"], po["platte"], "Polsterträger"),
+        (platte, "Lehnenplatte", 1, d["lehne_l"], d["pad_b"], po["platte"], "Polsterträger, Unterseite furniert"),
+        (metall, "Gelenkplatte Korpus", 2, 90, 85, sb["gelenkplatte"], "gelasert, mit Fuß unter dem Sitz, 4 × M6 durch den Deckel"),
+        (metall, "Gelenkplatte Lehne", 2, 110, 70, sb["gelenkplatte"], "gelasert, mit Lasche unter der Lehnenplatte"),
+        (metall, "Stützenbein", 2, sb["stuetze_laenge"] + 30, sb["bein_breite"], sb["bein_dicke"], "Flachstahl, Bohrungen für Gelenk und Querstab"),
+        (metall, "Querstab", 1, round(d["stab_l"]), sb["buegel_d"], sb["buegel_d"], "Rundstahl, mit den Beinen verschweißt"),
     ]
-    if d["n_mw"]:
-        liste.append(("Mittelwand", d["n_mw"], d["fach_tiefe"], d["innen_h"], t, "Birke Multiplex",
-                      "Bohrreihe für Bodenträger", 0))
-    if k["fachboden"]:
-        liste.append(("Fachboden", d["n_fach"], round(d["fach_breite"] - 2, 1), d["fach_tiefe"] - 5, t,
-                      "Birke Multiplex", "auf Bodenträgern, Filz/Kork belegt", 0))
-    liste += [
-        ("Schiebetür", d["n_tuer"], round(d["tuer_l"], 1), d["tuer_h"], tt, "Birke Multiplex",
-         f"{n_schlitze} Lüftungsschlitze {tu['schlitz_breite']} mm", schlitz_flaeche),
-        ("Polster-Trägerplatte", 1, d["L"], d["D"], p["polster"]["platte"], "Birke Multiplex",
-         "4 Bohrungen für Zentrierbolzen", 0),
-        ("Führungsleiste", 1, d["innen_l"], tu["leiste_tiefe"], tu["leiste_hoehe"], "Buche massiv",
-         f"2 Nuten {d['nut_breite']}×{tu['nut_oben']} unten", 2 * d["nut_breite"] * tu["nut_oben"]),
-    ]
-    return liste
 
 
-def schlitze_pro_tuer(p, d):
-    tu = p["tueren"]
-    nutzbar = d["tuer_l"] - 2 * tu["schlitz_rand"]
-    return int(nutzbar // tu["schlitz_abstand"]) + 1
+def ei(rects):
+    """Verbundquerschnitt aus Rechtecken (Breite, Höhe, z-Unterkante, E) → EI und Schwerpunkt."""
+    EA = sum(E * b * h for b, h, _, E in rects)
+    zs = sum(E * b * h * (z0 + h / 2) for b, h, z0, E in rects) / EA
+    EI = sum(E * (b * h ** 3 / 12 + b * h * (z0 + h / 2 - zs) ** 2) for b, h, z0, E in rects)
+    return EI, zs
 
 
-def gewicht_holz(p, d, liste):
-    m = p["material"]
-    kg = 0.0
-    for name, n, l, b, dicke, mat, _, abzug in liste:
-        rho = m["dichte_leiste"] if "massiv" in mat else m["dichte_platte"]
-        if name == "Führungsleiste":
-            vol = (l * b * dicke - l * abzug) * 1e-9 * n
-        else:
-            vol = (l * b - abzug) * dicke * 1e-9 * n
-        kg += vol * rho
-    return kg
-
-
-def flaechen(liste):
-    f = {}
-    for _, n, l, b, dicke, mat, _, _ in liste:
-        if "Multiplex" in mat:
-            f[dicke] = f.get(dicke, 0) + n * l * b * 1e-6
-    return f
-
-
-def biegung_front(p, d):
-    """Vordere Kante = Deckelstreifen + Führungsleiste als verleimter Verbundträger."""
-    m, tu, t = p["material"], p["tueren"], d["t"]
-    b_eff = 100   # mitwirkende Deckelbreite, konservativ
-    lh, lt, nb, no = tu["leiste_hoehe"], tu["leiste_tiefe"], d["nut_breite"], tu["nut_oben"]
-    # Rechtecke: (Breite, Höhe, z-Unterkante, E, Vorzeichen)
-    rect = [(lt, lh, 0, m["E_leiste"], 1),
-            (nb, no, 0, m["E_leiste"], -1),
-            (nb, no, 0, m["E_leiste"], -1),
-            (b_eff, t, lh, m["E_flach"], 1)]
-    EA = sum(s * E * bb * hh for bb, hh, _, E, s in rect)
-    z_s = sum(s * E * bb * hh * (z0 + hh / 2) for bb, hh, z0, E, s in rect) / EA
-    EI = sum(s * E * (bb * hh ** 3 / 12 + bb * hh * (z0 + hh / 2 - z_s) ** 2)
-             for bb, hh, z0, E, s in rect)
-    last = p["last"]
-    F = last["nutzer_kg"] * G * last["dynamik"] * last["anteil_front"]
-    l = d["fach_breite"] + t   # Stützweite Mitte–Mitte der Wände
-    w = F * l ** 3 / (48 * EI)
-    M = F * l / 4
-    sigma = M * z_s / EI * m["E_leiste"]   # Unterkante Leiste
-    return {"F": F, "l": l, "EI": EI, "w": w, "sigma": sigma, "grenze": l / 300}
-
-
-def biegung_deckel(p, d):
-    """Deckel als Platte zwischen Rückwand und Führungsleiste, Polsterplatte nicht angesetzt."""
-    m, last = p["material"], p["last"]
+def statik(p, d, platz, F_last):
+    m, last, sb, k = p["material"], p["last"], p["schraegbank"], p["korpus"]
+    t, Em, Ep = d["t"], m["E_massiv"], m["E_platte"]
     F = last["nutzer_kg"] * G * last["dynamik"]
-    l = d["fach_tiefe"]
-    b = min(300, d["fach_breite"])
-    I = b * d["t"] ** 3 / 12
-    w = 5 * F * l ** 3 / (384 * m["E_flach"] * I)
-    return {"F": F, "l": l, "b": b, "w": w, "grenze": l / 300}
+    res = []
+
+    # 1. Vorderkante: Deckelstreifen + aufgeleimte Rastleiste (Rasten abgezogen).
+    #    Die zwei Türnuten im Deckel werden mit negativem E abgezogen.
+    nut_b = p["tueren"]["traverse_dicke"] + 1
+    rects = [(100, t, 0, Em),
+             (2 * nut_b, tu_nut(p), 0, -Em),
+             (sb["leiste_breite"], p["polster"]["schattenfuge"] - sb["rast_tiefe"], t, Em)]
+    EI, _ = ei(rects)
+    l = d["fach_breite"] + d["ti"]
+    w = 0.5 * F * l ** 3 / (48 * EI)
+    res.append(("Vorderkante: Deckel + Rastleiste (50 % der Last)", 0.5 * F, l, w))
+
+    # 2. Lehnenplatte flach auf den Rastleisten (Rippen nicht angesetzt)
+    l2 = d["leiste_y0"][1] - d["leiste_y0"][0]
+    I2 = 300 * p["polster"]["platte"] ** 3 / 12
+    w2 = 5 * F * l2 ** 3 / (384 * Ep * I2)
+    res.append(("Lehnenplatte flach zwischen den Rastleisten (Streifen 300 mm)", F, l2, w2))
+
+    # 3. Lehne schräg: Kragarm hinter dem Stützengelenk, Platte + 2 Eichenrippen
+    pp = p["polster"]["platte"]
+    rects3 = [(d["pad_b"], pp, 0, Ep),
+              (2 * sb["rippe_breite"], sb["rippe_hoehe"], -sb["rippe_hoehe"], Em)]
+    EI3, _ = ei(rects3)
+    a = d["lehne_l"] - sb["stuetze_abstand"]
+    q = F_last * math.cos(math.radians(min(sb["winkel"]))) / d["lehne_l"]
+    w3 = q * a ** 4 / (8 * EI3)
+    res.append((f"Rückenlehne schräg, Überstand hinter der Stütze ({min(sb['winkel'])}°)", q * a, a, w3))
+
+    # 4. Fachboden mit dem schwersten Inhalt der oberen Ebene
+    if k["fachboden"]:
+        for f in range(d["n_fach"]):
+            kg = sum(i["kg"] for i in platz if i["fach"] == f and i["ebene"] == "oben")
+            Ff = kg * G * 2
+            l4 = d["fach_breite"]
+            I4 = (d["fach_tiefe"] - 5) * d["ti"] ** 3 / 12
+            w4 = 5 * Ff * l4 ** 3 / (384 * Ep * I4)
+            res.append((f"Fachboden Fach {f + 1} ({fmt(kg)} kg × 2)", Ff, l4, w4))
+    return res
 
 
-def biegung_fachboden(p, d, platz):
-    m = p["material"]
-    worst = None
-    for f in range(d["n_fach"]):
-        kg = sum(i["kg"] for i in platz if i["fach"] == f and i["ebene"] == "oben")
-        F = kg * G * 2   # Faktor 2 für Abstellen/Stoßen
-        l = d["fach_breite"]
-        I = (d["fach_tiefe"] - 5) * d["t"] ** 3 / 12
-        w = 5 * F * l ** 3 / (384 * m["E_flach"] * I)
-        if worst is None or w > worst["w"]:
-            worst = {"fach": f + 1, "kg": kg, "w": w, "l": l, "grenze": l / 300}
-    return worst
+def tu_nut(p):
+    return p["tueren"]["nut_oben"]
+
+
+def knicken(p, F_max):
+    sb = p["schraegbank"]
+    I = sb["bein_breite"] * sb["bein_dicke"] ** 3 / 12
+    F_cr = math.pi ** 2 * E_STAHL * I / sb["stuetze_laenge"] ** 2
+    return 2 * F_cr, 2 * F_cr / F_max
+
+
+def gewicht(p, d):
+    m, po, k, tu, sb = p["material"], p["polster"], p["korpus"], p["tueren"], p["schraegbank"]
+    t, L, D = d["t"], d["L"], d["D"]
+    sf = po["schattenfuge"]
+    se, sh = k["sockel_einzug"], k["sockel_hoehe"]
+    v_massiv = (2 * L * D * t + 2 * (d["korpus_h"] - 2 * t) * D * t
+                + d["n_tuer"] * (d["n_lamellen"] * d["lamelle_b"] * d["tuer_h"] * tu["lamelle_dicke"]
+                                 + 2 * d["tuer_l"] * 40 * tu["traverse_dicke"])
+                + 2 * (d["leiste_x1"] - d["leiste_x0"]) * sb["leiste_breite"] * sf
+                + 2 * d["rippe_l"] * sb["rippe_breite"] * sb["rippe_hoehe"]
+                + 4 * (po["sitz_laenge"] - 50) * 20 * sf
+                + 2 * (L - 2 * se) * sh * t + 2 * (D - 2 * se) * sh * t)
+    v_platte = (d["n_mw"] * d["fach_tiefe"] * d["innen_h"] * d["ti"]
+                + (d["n_fach"] if k["fachboden"] else 0) * d["fach_breite"] * d["fach_tiefe"] * d["ti"]
+                + d["innen_l"] * d["innen_h"] * d["tr"]
+                + (po["sitz_laenge"] + d["lehne_l"]) * d["pad_b"] * po["platte"])
+    holz = v_massiv * 1e-9 * m["dichte_massiv"] + v_platte * 1e-9 * m["dichte_platte"]
+    schaum = (po["sitz_laenge"] + d["lehne_l"]) * d["pad_b"] * po["schaum"] * 1e-9 * 45
+    stahl = 7850e-9 * (4 * 90 * 85 * sb["gelenkplatte"]
+                       + 2 * (sb["stuetze_laenge"] + 30) * sb["bein_breite"] * sb["bein_dicke"]
+                       + d["stab_l"] * math.pi * (sb["buegel_d"] / 2) ** 2)
+    rest = 1.5 + 1.5 + (0.4 if p["rollen"]["aktiv"] else 0)   # Leder, Beschläge, Rollen
+    flaeche_massiv = (2 * L * D + 2 * d["korpus_h"] * D + d["n_tuer"] * d["tuer_l"] * d["tuer_h"]
+                      + 2 * (L + D) * sh + (d["leiste_x1"] - d["leiste_x0"] + d["rippe_l"]) * 0.1) * 1e-6
+    flaeche_platte = (d["n_mw"] * d["fach_tiefe"] * d["innen_h"] + d["n_fach"] * d["fach_breite"] * d["fach_tiefe"]
+                      + (d["innen_l"] + 20) * (d["innen_h"] + 20)
+                      + (po["sitz_laenge"] + d["lehne_l"]) * d["pad_b"]) * 1e-6
+    return {"holz": holz, "schaum": schaum, "stahl": stahl, "rest": rest,
+            "leer": holz + schaum + stahl + rest,
+            "flaeche_massiv": flaeche_massiv, "flaeche_platte": flaeche_platte}
 
 
 def ankippen(p, d):
-    """Winkel und Hubhöhe, bis die Rollen an der rechten Stirnseite greifen."""
-    r = p["rollen"]
+    """Winkel und Hubhöhe, bis die verdeckten Rollen am rechten Ende greifen."""
+    r, se = p["rollen"], p["korpus"]["sockel_einzug"]
     rad = r["durchmesser"] / 2
-    dx = rad + 2          # Rollenmitte vor der Stirnseite
-    zc = rad + r["bodenfreiheit"]
+    dx, zc = se / 2, rad + r["bodenfreiheit"]
     a = 0.0
     while zc * math.cos(a) - dx * math.sin(a) > rad and a < math.radians(45):
         a += math.radians(0.1)
-    return math.degrees(a), d["L"] * math.sin(a)
+    return math.degrees(a), (d["L"] - se) * math.sin(a)
 
 
 def fmt(x, n=1):
-    s = f"{x:,.{n}f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    return s
+    return f"{x:,.{n}f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def write_stueckliste(p, d, liste, platz):
+def zahl(x):
+    return fmt(x, 0 if float(x).is_integer() else 1)
+
+
+def write_stueckliste(p, d, liste, platz, gw):
     m = p["material"]
-    f = flaechen(liste)
-    holz = gewicht_holz(p, d, liste)
-    po = p["polster"]
-    schaum_kg = d["L"] * d["D"] * po["schaum"] * 1e-9 * 45
-    rest_kg = 1.0 + 1.5 + (0.6 if p["rollen"]["aktiv"] else 0)  # Bezug, Beschläge, Rollen
-    leer = holz + schaum_kg + rest_kg
     inhalt = sum(i["kg"] for i in platz)
-    preis = {18: m["preis_m2_18"], 15: m["preis_m2_18"], 12: m["preis_m2_12"]}
-    kosten_platten = sum(a * 1.15 * preis.get(dicke, m["preis_m2_18"]) for dicke, a in f.items())
-    zugabe = 2 * (d["polster_h"] + 80)
-    bezug = ((d["L"] + zugabe) / 1000, (d["D"] + zugabe) / 1000)
-
+    kosten_massiv = gw["flaeche_massiv"] * 1.25 * m["preis_massiv_m2"]
+    kosten_platte = gw["flaeche_platte"] * 1.15 * m["preis_platte_m2"]
+    holz_k = kosten_massiv + kosten_platte
     out = ["# Stückliste", "",
-           "> Automatisch erzeugt aus `params.toml` mit `python3 tools/build.py`. Nicht von Hand ändern.", "",
-           "## Zuschnitt", "",
-           "| Teil | Stk. | Länge | Breite | Dicke | Material | Hinweis |",
-           "|---|---:|---:|---:|---:|---|---|"]
-    for name, n, l, b, dicke, mat, hinweis, _ in liste:
-        out.append(f"| {name} | {n} | {fmt(l, 0 if float(l).is_integer() else 1)} | {fmt(b, 0 if float(b).is_integer() else 1)} | {dicke} | {mat} | {hinweis} |")
-    out += ["", "Maße in mm. Länge = Faserrichtung der Deckfurniere (bei Multiplex optisch, nicht statisch relevant).", "",
-            "## Plattenbedarf", "",
-            "| Dicke | Fläche netto | mit 15 % Verschnitt |", "|---:|---:|---:|"]
-    for dicke, a in sorted(f.items(), reverse=True):
-        out.append(f"| {dicke} mm | {fmt(a, 2)} m² | {fmt(a * 1.15, 2)} m² |")
-    out += ["", "## Polster", "",
-            f"- Schaumstoff {d['L']} × {d['D']} × {po['schaum']} mm, Empfehlung: 30 mm hart (RG 50+) unten + 20 mm mittel (RG 35–40) oben",
-            "- Vlies/Wattierung 100 g/m² über den Schaum (weichere Kanten, Bezug liegt glatter)",
-            f"- Bezug ca. {fmt(bezug[0], 2)} × {fmt(bezug[1], 2)} m (inkl. Umschlag zum Tackern)",
-            "- Untere Abdeckung (Staubschutz-Vlies) für die Polsterunterseite", "",
+           "> Automatisch erzeugt aus `params.toml` mit `python3 tools/build.py`. Nicht von Hand ändern.", ""]
+    for gruppe in dict.fromkeys(g for g, *_ in liste):
+        out += [f"## {gruppe}", "",
+                "| Teil | Stk. | Länge | Breite | Dicke | Hinweis |",
+                "|---|---:|---:|---:|---:|---|"]
+        for g, name, n, l, b, dicke, hinweis in liste:
+            if g == gruppe and n:
+                out.append(f"| {name} | {n} | {zahl(l)} | {zahl(b)} | {zahl(dicke)} | {hinweis} |")
+        out.append("")
+    po = p["polster"]
+    zug = 2 * (d["polster_h"] + 60)
+    leder = ((po["sitz_laenge"] + zug) * (d["pad_b"] + zug) + (d["lehne_l"] + zug) * (d["pad_b"] + zug)) * 1e-6
+    out += ["Maße in mm. Massivholz: Länge = Faserrichtung.", "",
+            "## Polster", "",
+            f"- Schaumstoff je Polster {po['schaum']} mm: 30 mm hart (RG 50+) unten, 20 mm mittel (RG 35–40) oben",
+            "- Polyesterwatte 200 g/m² über den Schaum, damit die Kanten weich und voll wirken",
+            f"- Bezug: ca. {fmt(leder, 2)} m² Leder (Vollnarben-Rindleder oder hochwertiges Kunstleder), mit Kedernaht an der Oberkante",
+            "- Unterseite der Lehnenplatte: Furnier oder Leder, weil sie beim Aufstellen sichtbar ist", "",
             "## Beschläge und Kleinteile", "",
             "| Teil | Menge | Zweck |", "|---|---:|---|",
-            "| Holzdübel 8 mm oder Domino/Lamello | ca. 40 | Korpusverbindungen, verleimt |",
-            "| Holzleim D3 | 1 Flasche | feuchtigkeitsbeständig (Schweiß, Wischen) |",
-            f"| Bodenträger 5 mm mit Kippschutz | {4 * d['n_fach'] if p['korpus']['fachboden'] else 0} | Fachböden |",
-            "| Zentrierbolzen/Möbelverbinder | 4 | Polster rutschfest und abnehmbar |",
-            "| Einschlagmuttern M6 + Sterngriffschrauben | 4 | optional: Polster fest verschrauben |",
-            f"| Rollen Ø {p['rollen']['durchmesser']} mm mit Achse/Halter | {2 if p['rollen']['aktiv'] else 0} | Transport durch Ankippen |",
-            "| Antirutsch-Gummipads | 4 | unter die Füße, Bank darf beim Training nicht wandern |",
-            "| Gleitband/Wachs | – | Laufnuten der Schiebetüren |",
-            "| Filz oder Kork 3 mm | ca. 0,5 m² | Auflage in den Hantelfächern |",
-            f"| Hartholz-Abstandshalter | ca. {len([i for i in platz if i['typ'] == 'kh']) * 2} | zwischen den Hanteln, Fingerschutz |",
-            "| Hartwachsöl oder 2K-Lack | 0,75 l | Oberfläche |", "",
+            "| Domino-/Lamello-Verbinder | ca. 40 | Gehrungen und Einbauten, verleimt |",
+            "| Holzleim D3 | 1 | feuchtebeständig (Schweiß, Wischen) |",
+            "| Gelenkbolzen M10 mit Messing- oder Gleitlagerbuchse, Hutmutter | 2 | Drehachse der Lehne |",
+            "| Lagerböcke für die Stütze, Bolzen M8 | 2 | Gelenk der Stütze an den Rippen |",
+            "| Gegenplatte Flachstahl 60 × 6 unter dem Deckel | 2 | nimmt die Zugkraft der Gelenkplatten auf |",
+            "| Schrauben M6 durchgehend + Einschlagmuttern | 12 | Gelenkplatten und Sitz, lösbar |",
+            f"| Bodenträger 5 mm | {4 * d['n_fach'] if p['korpus']['fachboden'] else 0} | Fachböden |",
+            "| Gleitband für Laufnuten | 2,5 m | leiser Lauf der Schiebetüren |",
+            f"| Rollen Ø {p['rollen']['durchmesser']} mm, gummiert, mit Platte | {2 if p['rollen']['aktiv'] else 0} | verdeckt am rechten Ende |",
+            "| Antirutsch-Filzgleiter/Gummipads | 4 | unter dem Sockel |",
+            "| Filz oder Leder 3 mm | ca. 0,5 m² | Auflage in den Hantelfächern |",
+            f"| Abstandshalter Eiche | ca. {len([i for i in platz if i['typ'] == 'kh']) * 2} | zwischen den Hanteln, Fingerschutz |",
+            "| Hartwachsöl (z. B. farblos oder „weiß“ gegen Nachdunkeln) | 0,75 l | Oberfläche |",
+            "| Beize schwarz | 0,25 l | Sockel, Rastleisten, Distanzleisten |", "",
             "## Gewicht und Kosten (Schätzung)", "",
-            f"- Holz: ca. {fmt(holz)} kg",
-            f"- Bank leer inkl. Polster und Beschlägen: ca. **{fmt(leer)} kg**",
-            f"- Inventar im Stauraum: {fmt(inhalt)} kg → gesamt ca. **{fmt(leer + inhalt)} kg**",
-            f"- Platten inkl. Verschnitt: ca. {fmt(kosten_platten, 0)} € (Annahme {m['preis_m2_18']} €/m² für 18 mm)",
-            "- Polster (Schaum, Bezug, Vlies): ca. 80–200 € je nach Bezugsmaterial",
-            "- Beschläge, Rollen, Leim, Öl: ca. 60–100 €",
-            f"- **Material gesamt: ca. {fmt(kosten_platten + 140, 0)}–{fmt(kosten_platten + 300, 0)} €** (ohne Hanteln und Werkzeug)", ""]
+            f"- Holz {fmt(gw['holz'])} kg, Stahl {fmt(gw['stahl'])} kg, Schaum {fmt(gw['schaum'])} kg, Leder/Beschläge/Rollen {fmt(gw['rest'])} kg",
+            f"- Bank leer: ca. **{fmt(gw['leer'])} kg**, mit Inventar ({fmt(inhalt)} kg): ca. **{fmt(gw['leer'] + inhalt)} kg**", "",
+            "| Posten | Kosten |", "|---|---:|",
+            f"| Eiche massiv, {fmt(gw['flaeche_massiv'], 2)} m² + 25 % Verschnitt à {m['preis_massiv_m2']} €/m² | ca. {fmt(kosten_massiv, 0)} € |",
+            f"| Multiplex eichefurniert, {fmt(gw['flaeche_platte'], 2)} m² + 15 % à {m['preis_platte_m2']} €/m² | ca. {fmt(kosten_platte, 0)} € |",
+            "| Leder, Schaum, Watte | 250–450 € |",
+            "| Stahlteile gelasert, gekantet, pulverbeschichtet (oder Messing) | 120–250 € |",
+            "| Beschläge, Rollen, Öl, Beize, Kleinteile | 100–150 € |",
+            f"| **Material gesamt** | **ca. {fmt(holz_k + 470, 0)}–{fmt(holz_k + 850, 0)} €** |",
+            "| optional: Polsterei für beide Polster | 250–450 € |", "",
+            "Ohne Hanteln, Werkzeug und eigene Arbeitszeit. Preise sind grobe Annahmen und regional sehr verschieden.", ""]
     (ROOT / "docs" / "stueckliste.md").write_text("\n".join(out))
-    return leer, inhalt
+    return inhalt
 
 
-def write_berechnung(p, d, platz, fehlt, belegt, leer, inhalt):
-    fr = biegung_front(p, d)
-    de = biegung_deckel(p, d)
-    fb = biegung_fachboden(p, d, platz) if p["korpus"]["fachboden"] else None
-    last = p["last"]
+def write_berechnung(p, d, platz, fehlt, belegt, gw, inhalt, rs, park, F_last, rfehler, rabst):
+    sb, last, k, po = p["schraegbank"], p["last"], p["korpus"], p["polster"]
 
     def ok(w, g):
         return "✅" if w <= g else "⚠️"
@@ -371,57 +459,103 @@ def write_berechnung(p, d, platz, fehlt, belegt, leer, inhalt):
            "> Überschlagsrechnung zur Plausibilisierung, kein Statik-Nachweis.", "",
            "## Hauptmaße", "",
            f"- Außen: {d['L']} × {d['D']} × {d['H']} mm (L × T × H), Sitz- = Trainingshöhe {d['H']} mm",
-           f"- Polster: {d['polster_h']} mm ({p['polster']['platte']} mm Platte + {p['polster']['schaum']} mm Schaum)",
-           f"- Fächer: {d['n_fach']} × {fmt(d['fach_breite'])} mm breit, {d['fach_tiefe']} mm tief, "
-           + (f"je 2 Ebenen à {fmt(d['zelle_h'])} mm" if p["korpus"]["fachboden"] else f"{d['innen_h']} mm hoch"),
-           f"- Schiebetüren: {d['n_tuer']} × {fmt(d['tuer_l'])} × {d['tuer_h']} mm, Durchgriffshöhe {d['tuer_oeffnung']} mm", "",
-           "## Stauraum-Belegung", "",
-           "Schwerste Teile zuerst, untere Ebene zuerst. Zelle = Fach + Ebene.", "",
-           "| Zelle | Inhalt | Breite | Höhe | Tiefe | kg |", "|---|---|---:|---:|---:|---:|"]
+           f"- Polster {d['pad_b']} mm breit, rundum {po['einzug']} mm eingerückt, {po['schattenfuge']} mm Schattenfuge darunter",
+           f"- Sitz {po['sitz_laenge']} mm + Fuge {po['fuge']} mm + Rückenlehne {d['lehne_l']} mm",
+           f"- Korpus Eiche massiv {d['t']} mm auf Gehrung, Sockel {k['sockel_einzug']} mm zurückgesetzt",
+           f"- Fächer: {d['n_fach']} × {fmt(d['fach_breite'])} mm breit, {d['fach_tiefe']} mm tief",
+           f"- Schiebetüren: {d['n_tuer']} × {fmt(d['tuer_l'])} mm, je {d['n_lamellen']} Lamellen à {fmt(d['lamelle_b'])} mm", "",
+           "## Schrägbank", "",
+           f"Drehachse {sb['achse_unter_oberkante']} mm unter der Polsteroberfläche an der Vorderkante der Lehne "
+           f"(x = {d['achse_x']} mm ab linkem Ende). Die Stütze ist {sb['stuetze_abstand']} mm hinter der Achse angelenkt, "
+           f"{sb['stuetze_laenge']} mm lang und rastet in zwei Leisten auf dem Deckel ein.", "",
+           f"Last: {int(sb['last_anteil'] * 100)} % von {last['nutzer_kg']} kg × {last['dynamik']} = {fmt(F_last, 0)} N "
+           f"auf der Lehne, {sb['last_abstand']} mm hinter der Achse. Gerechnet sind zwei Lastfälle, "
+           "das Gewicht senkrecht nach unten und die gleiche Last senkrecht auf die Lehnenfläche "
+           "(kräftiges Zurücklehnen beim Drücken). Die Tabelle zeigt den ungünstigeren Fall.", "",
+           "| Stellung | Rast ab Achse | Rast ab linkem Ende | Stützkraft | Achskraft | Neigung Stütze |",
+           "|---|---:|---:|---:|---:|---:|",
+           f"| 0° flach (Parkrast, {fmt(d['park_tiefe'], 0)} mm tief) | {fmt(park, 0)} mm | {fmt(d['achse_x'] + park, 0)} mm | – | – | 0° |"]
+    for r in rs:
+        if r["ok"]:
+            out.append(f"| {r['winkel']}° | {fmt(r['n'], 0)} mm | {fmt(d['achse_x'] + r['n'], 0)} mm | "
+                       f"{fmt(r['F'], 0)} N | {fmt(r['R'], 0)} N | {fmt(r['neigung'], 0)}° |")
+        else:
+            out.append(f"| {r['winkel']}° | – | – | – | – | Stütze zu kurz |")
+    F_max = max((r["F"] for r in rs if r["ok"]), default=0)
+    F_cr, sk = knicken(p, F_max)
+    out += ["",
+            f"- Rasttiefe {sb['rast_tiefe']} mm, kleinster Abstand zwischen zwei Rasten {fmt(rabst, 0)} mm "
+            f"(Minimum {sb['min_rastabstand']} mm).",
+            f"- Knicken der Stütze (2 × Flachstahl {sb['bein_breite']} × {sb['bein_dicke']}): "
+            f"Knicklast {fmt(F_cr / 1000, 1)} kN bei max. {fmt(F_max / 1000, 2)} kN → Sicherheit ≈ {fmt(sk, 1)}.",
+            f"- Die Achskraft verteilt sich auf zwei Bolzen M10: Scherspannung ≈ {fmt(max((r['R'] for r in rs if r['ok']), default=0) / 2 / (math.pi * 25), 0)} N/mm² (zulässig > 100 N/mm²).",
+            "- Bei steiler Lehne zieht die Achse nach oben: Die Gelenkplatten werden mit durchgehenden Schrauben "
+            "und einer Stahl-Gegenplatte unter dem Deckel befestigt, nicht nur mit Holzschrauben.",
+            "- Kleinere Winkel als der kleinste Rastwinkel gehen mit einer einzigen Klappstütze nicht: "
+            "Die Rast läge dann zu nah an der Parkrast.", ""]
+    if rfehler:
+        out += ["**⚠️ Geometrie prüfen:** " + "; ".join(rfehler), ""]
+    else:
+        out += ["✅ Alle Rasten liegen auf der Leiste und haben genug Abstand.", ""]
+
+    out += ["## Stauraum-Belegung", "",
+            "Schwerste Teile zuerst, untere Ebene zuerst.", "",
+            "| Zelle | Inhalt | Breite | Höhe | Tiefe | kg |", "|---|---|---:|---:|---:|---:|"]
     for i in sorted(platz, key=lambda i: (i["fach"], i["ebene"] == "oben")):
         out.append(f"| {i['zelle']} | {i['name']} | {fmt(i['w'], 0)} | {fmt(i['h'], 0)} | {fmt(i['d'], 0)} | {fmt(i['kg'])} |")
     out += ["", "| Zelle | Zugangshöhe | belegt / verfügbar (Breite) |", "|---|---:|---:|"]
     for z in sorted(d["zellen"], key=lambda z: (z["fach"], z["ebene"] == "oben")):
         out.append(f"| {z['name']} | {fmt(z['zugang'], 0)} mm | {fmt(belegt[z['name']], 0)} / {fmt(z['breite'], 0)} mm |")
-    if fehlt:
-        out += ["", "**⚠️ Passt nicht:** " + ", ".join(i["name"] for i in fehlt)]
-    else:
-        out += ["", "✅ Alles Inventar findet Platz."]
+    out += ["", ("**⚠️ Passt nicht:** " + ", ".join(i["name"] for i in fehlt)) if fehlt
+            else "✅ Alles Inventar findet Platz."]
 
     out += ["", "## Durchbiegung", "",
             f"Lastannahme: {last['nutzer_kg']} kg Nutzer × Stoßfaktor {last['dynamik']}.", "",
             "| Bauteil | Last | Stützweite | Durchbiegung | Grenze L/300 | |",
-            "|---|---:|---:|---:|---:|---|",
-            f"| Vorderkante (Deckel + Buchenleiste, Anteil {int(last['anteil_front'] * 100)} %) | {fmt(fr['F'], 0)} N | {fmt(fr['l'], 0)} mm | {fmt(fr['w'], 2)} mm | {fmt(fr['grenze'], 2)} mm | {ok(fr['w'], fr['grenze'])} |",
-            f"| Deckel vorne→hinten (Streifen {de['b']} mm, volle Last) | {fmt(de['F'], 0)} N | {de['l']} mm | {fmt(de['w'], 2)} mm | {fmt(de['grenze'], 2)} mm | {ok(de['w'], de['grenze'])} |"]
-    if fb:
-        out.append(f"| Fachboden Fach {fb['fach']} ({fmt(fb['kg'])} kg × 2) | {fmt(fb['kg'] * G * 2, 0)} N | {fmt(fb['l'], 0)} mm | {fmt(fb['w'], 2)} mm | {fmt(fb['grenze'], 2)} mm | {ok(fb['w'], fb['grenze'])} |")
+            "|---|---:|---:|---:|---:|---|"]
+    for name, F, l, w in statik(p, d, platz, F_last):
+        out.append(f"| {name} | {fmt(F, 0)} N | {fmt(l, 0)} mm | {fmt(w, 2)} mm | {fmt(l / 300, 2)} mm | {ok(w, l / 300)} |")
+    out += ["", "Die verleimte Rückwand trägt die Hinterkante des Deckels zusätzlich mit. Sie ist hier nicht angesetzt.", ""]
+
+    se, e = k["sockel_einzug"], po["einzug"]
+    ueber = se - e
+    out += ["## Kippsicherheit", "",
+            f"Der Sockel steht {se} mm hinter der Korpuskante, das Polster {e} mm. "
+            f"Eine Last am Polsterrand liegt also {ueber} mm außerhalb der Standfläche.", "",
+            "| Fall | leer | mit Inventar |", "|---|---:|---:|"]
+    seit = [gw["leer"] * (d["D"] / 2 - se) / ueber, (gw["leer"] + inhalt) * (d["D"] / 2 - se) / ueber]
+    stirn = [gw["leer"] * (d["L"] / 2 - se) / ueber, (gw["leer"] + inhalt) * (d["L"] / 2 - se) / ueber]
+    out.append(f"| Senkrechte Last auf der Längskante, ab der die Bank kippt | {fmt(seit[0], 0)} kg | {fmt(seit[1], 0)} kg |")
+    out.append(f"| Senkrechte Last auf der Stirnkante, ab der die Bank kippt | {fmt(stirn[0], 0)} kg | {fmt(stirn[1], 0)} kg |")
+    a_max = math.radians(max(sb["winkel"]))
+    h_top = d["achse_z"] + d["lehne_l"] * math.sin(a_max)
+    hebel = d["L"] - se - d["L"] / 2
+    kipp = [(w * G * hebel / h_top) for w in (gw["leer"], gw["leer"] + inhalt)]
+    out.append(f"| Lehne {max(sb['winkel'])}°: waagerechter Zug/Druck nach hinten an der Lehnenoberkante ({fmt(h_top, 0)} mm hoch), niemand sitzt | "
+               f"{fmt(kipp[0], 0)} N | {fmt(kipp[1], 0)} N |")
+    mit_person = kipp[0] + last["nutzer_kg"] * G * (d["L"] - se - (d["sitz_x0"] + d["sitz_x1"]) / 2) / h_top
     out += ["",
-            f"Biegespannung Unterkante Buchenleiste: {fmt(fr['sigma'])} N/mm² "
-            f"(Buche massiv ~100 N/mm² Bruch → Sicherheit ≈ {fmt(100 / fr['sigma'], 0)}).",
-            "Die Polster-Trägerplatte ist nicht angesetzt und bringt zusätzliche Reserve.", "",
-            "## Kippsicherheit", "",
-            "- Die Seitenwangen stehen bündig mit den Außenkanten auf dem Boden, das Polster steht nicht über.",
-            "  **Senkrechte Lasten liegen immer innerhalb der Standfläche → die Bank kann durch Draufsitzen, Aufsteigen oder Abstützen an der Kante nicht kippen.**"]
-    for label, kg in (("leer", leer), ("mit Inventar", leer + inhalt)):
-        Fh = kg * G * (d["D"] / 2) / d["H"]
-        out.append(f"- Waagerechte Kraft an der Polsteroberkante, die die Bank {label} seitlich kippt: ≈ {fmt(Fh, 0)} N (≈ {fmt(Fh / G, 0)} kg)")
-    out.append("- Sitzt jemand auf der Bank, steigt dieser Wert um sein Körpergewicht × 0,44 – im Training unkritisch.")
+            f"Sitzt jemand auf dem Sitz, steigt der letzte Wert (leere Bank) auf ≈ {fmt(mit_person, 0)} N. "
+            "Beim Training ist das unkritisch. Die aufgestellte Lehne ist aber kein Griff zum Hochziehen, "
+            "wenn die Bank leer ist.", ""]
     if p["rollen"]["aktiv"]:
         a, hub = ankippen(p, d)
-        out += ["", "## Transport", "",
-                f"- Rollen greifen ab ≈ {fmt(a)}° Neigung, d. h. linkes Ende am Griffloch um ≈ {fmt(hub, 0)} mm anheben.",
-                f"- Am Griff anzuheben (halbes Gewicht, mit Inventar): ≈ {fmt((leer + inhalt) / 2, 0)} kg → schwere Hanteln vorher herausnehmen."]
-    (ROOT / "docs" / "berechnung.md").write_text("\n".join(out) + "\n")
+        out += ["## Transport", "",
+                f"- Die Rollen sitzen verdeckt unter dem Korpusüberstand am rechten Ende und greifen ab ≈ {fmt(a)}° Neigung.",
+                f"- Dazu das linke Ende unter dem Überstand fassen und ≈ {fmt(hub, 0)} mm anheben.",
+                f"- Dabei zu heben (halbes Gewicht): leer ≈ {fmt(gw['leer'] / 2, 0)} kg, mit Inventar ≈ {fmt((gw['leer'] + inhalt) / 2, 0)} kg "
+                "→ schwere Hanteln vorher herausnehmen.", ""]
+    (ROOT / "docs" / "berechnung.md").write_text("\n".join(out))
 
 
 ANSICHTEN = [
     # Datei, Kamera (tx,ty,tz,rx,ry,rz,dist), Projektion, -D Optionen
-    ("moebel.png", "600,200,200,70,0,25,2400", "p", {}),
-    ("stauraum.png", "600,200,200,70,0,25,2400", "p", {"zeige_tueren": "false"}),
-    ("explosion.png", "600,200,250,68,0,25,3200", "p", {"explosion": "1"}),
-    ("front.png", "600,0,225,90,0,0,1900", "o", {"zeige_tueren": "false"}),
-    ("seite.png", "0,200,225,90,0,90,1300", "o", {}),
+    ("moebel.png", "600,200,230,70,0,25,2500", "p", {}),
+    ("moebel_nussbaum.png", "600,200,230,70,0,25,2500", "p", {"farbschema": '"nussbaum"'}),
+    ("schraeg.png", "600,200,450,70,0,25,3400", "p", {"lehne_winkel": "45"}),
+    ("verstellung.png", "640,0,700,90,0,0,3000", "o", {"lehne_winkel": "45", "geist": "true", "zeige_inhalt": "false"}),
+    ("stauraum.png", "600,200,230,70,0,25,2500", "p", {"zeige_tueren": "false"}),
+    ("explosion.png", "600,200,300,66,0,25,3400", "p", {"explosion": "1"}),
 ]
 
 
@@ -447,12 +581,16 @@ def render():
 def main():
     p = load_params()
     d = derive(p)
+    rs, park, F_last = rasten(p, d)
+    rfehler, rabst = pruefe_rasten(p, d, rs, park)
     platz, fehlt, belegt = pack(p, d)
-    write_scad(p, d, platz)
-    liste = teile(p, d)
-    leer, inhalt = write_stueckliste(p, d, liste, platz)
-    write_berechnung(p, d, platz, fehlt, belegt, leer, inhalt)
+    write_scad(p, d, platz, rs, park)
+    gw = gewicht(p, d)
+    inhalt = write_stueckliste(p, d, teile(p, d), platz, gw)
+    write_berechnung(p, d, platz, fehlt, belegt, gw, inhalt, rs, park, F_last, rfehler, rabst)
     print("cad/params.scad, docs/stueckliste.md, docs/berechnung.md geschrieben")
+    for w in rfehler:
+        print("WARNUNG Schrägbank:", w)
     if fehlt:
         print("WARNUNG – passt nicht in den Stauraum:", ", ".join(i["name"] for i in fehlt))
     if "--no-render" not in sys.argv:
