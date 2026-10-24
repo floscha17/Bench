@@ -59,11 +59,12 @@ module sockel() {
     }
 }
 
+// Rollen verdeckt unter dem hinteren Überstand (Bettseite), rollen quer zur Bank
 module rollen() {
-    for (y = [sockel_einzug + 20, D - sockel_einzug - 20 - rolle_b])
-        translate([L - sockel_einzug / 2, y, rolle_d / 2 + rolle_luft - 70 * e]) {
-            rotate([-90, 0, 0]) color(c_rolle) cylinder(d = rolle_d, h = rolle_b);
-            color([0.5, 0.5, 0.5]) translate([-12, -3, rolle_d / 2 - 2]) cube([24, rolle_b + 6, 4]);
+    for (x = rolle_x)
+        translate([x - rolle_b / 2, D - sockel_einzug / 2, rolle_d / 2 + rolle_luft - 70 * e]) {
+            rotate([0, 90, 0]) color(c_rolle) cylinder(d = rolle_d, h = rolle_b);
+            color([0.5, 0.5, 0.5]) translate([-3, -12, rolle_d / 2 - 2]) cube([rolle_b + 6, 24, 4]);
         }
 }
 
@@ -195,6 +196,19 @@ module lehne(a) {
 
 // ---------- Inhalt ----------
 
+// selbstgebaute Hantel: runde Stahlköpfe mit Abflachung, Eichengriff; liegt auf der Abflachung
+module hantel_rund(kopf, kopf_l, laenge) {
+    zc = kopf / 2 - abflachung;
+    difference() {
+        for (y = [0, laenge - kopf_l])
+            translate([kopf / 2, y, zc]) rotate([-90, 0, 0])
+                color(c_hantel) cylinder(d = kopf, h = kopf_l, $fn = 48);
+        translate([-1, -1, -kopf]) cube([kopf + 2, laenge + 2, kopf]);
+    }
+    translate([kopf / 2, kopf_l, zc]) rotate([-90, 0, 0])
+        color(c_holz) cylinder(d = griff_d, h = laenge - 2 * kopf_l, $fn = 32);
+}
+
 module kurzhantel(kopf, laenge) {
     kl = kopf * 0.42;
     for (y = [0, laenge - kl])
@@ -207,9 +221,12 @@ module kurzhantel(kopf, laenge) {
 module inhalt_zeichnen() {
     for (it = inhalt) {
         typ = it[0]; x = it[1]; y = it[2]; z = it[3];
-        b = it[4]; h = it[5]; tf = it[6]; kopf = it[7];
+        b = it[4]; h = it[5]; tf = it[6]; kopf = it[7]; kopf_l = it[8];
         translate([x, y, z])
-            if (typ == "kh") {
+            if (typ == "khr") {
+                hantel_rund(kopf, kopf_l, tf);
+                translate([kopf + abstand, 0, 0]) hantel_rund(kopf, kopf_l, tf);
+            } else if (typ == "kh") {
                 kurzhantel(kopf, tf);
                 translate([kopf + abstand, 0, 0]) kurzhantel(kopf, tf);
             } else {

@@ -16,6 +16,8 @@ import sys
 import tomllib
 from pathlib import Path
 
+import zeichnungen
+
 ROOT = Path(__file__).resolve().parent.parent
 G = 9.81
 E_STAHL = 210000
@@ -120,14 +122,15 @@ def derive(p):
     return d
 
 
-def rasten(p, d):
+def rasten(p, d, s=None, l=None, winkel=None):
     """Raststellungen der Stütze: Position je Winkel, Stützkraft, Achskraft."""
     sb, last = p["schraegbank"], p["last"]
-    s, l = sb["stuetze_abstand"], sb["stuetze_laenge"]
+    s = s or sb["stuetze_abstand"]
+    l = l or sb["stuetze_laenge"]
     vA, zN = d["vA"], d["rast_z"]
     F_last = sb["last_anteil"] * last["nutzer_kg"] * G * last["dynamik"]
     out = []
-    for a in sb["winkel"]:
+    for a in winkel or sb["winkel"]:
         r = math.radians(a)
         Ax = s * math.cos(r) - vA * math.sin(r)
         Az = s * math.sin(r) + vA * math.cos(r)
@@ -168,16 +171,49 @@ def pruefe_rasten(p, d, rs, park):
     return fehler, abst
 
 
-def pack(p, d):
-    """Verteilt das Inventar auf die Zellen (schwerste Teile zuerst, unten zuerst)."""
+def suche_stuetze(p, d):
+    """Sucht Anlenkpunkt und Länge der Stütze, bei denen alle Rasten passen und die Stützkraft klein bleibt."""
+    sb = p["schraegbank"]
+    treffer = []
+    for s in range(150, int(d["lehne_l"]), 10):
+        for l in range(150, int(d["lehne_l"]), 10):
+            rs, park, _ = rasten(p, d, s, l)
+            if not pruefe_rasten(p, d, rs, park)[0]:
+                treffer.append((max(r["F"] for r in rs), s, l))
+    treffer.sort()
+    print(f"Winkel {sb['winkel']}, Lehne {d['lehne_l']} mm – beste Stützen (max. Stützkraft, Abstand, Länge):")
+    for F, s, l in treffer[:8]:
+        print(f"  {F:6.0f} N   stuetze_abstand = {s}   stuetze_laenge = {l}")
+    if not treffer:
+        print("  keine Lösung – Winkel oder Lehnenlänge ändern")
+
+
+def hanteln(p):
+    """Kopflänge je Hantel aus dem Zielgewicht: Stahlköpfe mit Abflachung und Fasen, Eichengriff, M16-Kern."""
+    h = p["hanteln"]
+    rs_, rg = h["dichte_stahl"] * 1e-9, h["dichte_griff"] * 1e-9
+    gl, gd, kd, ab, fa = h["griff_laenge"], h["griff_d"], h["kern_d"], h["abflachung"], h["fase"]
+    m_griff = math.pi / 4 * kd ** 2 * gl * rs_ + math.pi / 4 * (gd ** 2 - kd ** 2) * gl * rg
+    out = []
+    for kg, D in h["satz"]:
+        R = D / 2
+        seg = R * R * math.acos((R - ab) / R) - (R - ab) * math.sqrt(2 * R * ab - ab * ab) if ab else 0
+        A = math.pi * R * R - seg
+        m_kopf = (kg - m_griff) / 2
+        lk = m_kopf / (A * rs_) + math.pi * D * fa ** 2 / A   # Fasenvolumen ausgleichen
+        out.append({"kg": kg, "D": D, "lk": lk, "laenge": gl + 2 * lk, "m_kopf": m_kopf,
+                    "kern_l": gl + 2 * h["gewinde_tiefe"], "liegehoehe": D - ab})
+    return out, m_griff
+
+
+def pack(p, d, hs):
+    """Verteilt Hanteln und Inventar auf die Zellen (schwerste Teile zuerst, unten zuerst)."""
     gap = p["inventar"]["abstand"]
-    items = []
-    for it in p["inhalt"]:
-        if it["typ"] == "kh":
-            w, h, dep = 2 * it["kopf"] + gap, it["kopf"], it["laenge"]
-        else:
-            w, h, dep = it["breite"], it["hoehe"], it["tiefe"]
-        items.append({**it, "w": w, "h": h, "d": dep})
+    items = [{"name": f"Kurzhanteln {fmt(x['kg'])} kg (Paar)", "typ": "khr", "kg": 2 * x["kg"],
+              "w": 2 * x["D"] + gap, "h": x["liegehoehe"], "d": x["laenge"],
+              "kopf": x["D"], "kopf_l": x["lk"]} for x in hs]
+    for it in p.get("inhalt", []):
+        items.append({**it, "w": it["breite"], "h": it["hoehe"], "d": it["tiefe"]})
     items.sort(key=lambda i: -i["kg"])
 
     belegt = {z["name"]: gap for z in d["zellen"]}
@@ -236,10 +272,12 @@ def write_scad(p, d, platz, rs, park):
         "rasten": [r_["n"] for r_ in rs if r_["ok"]], "park": park,
         "rollen": r["aktiv"], "rolle_d": r["durchmesser"], "rolle_b": r["breite"],
         "rolle_luft": r["bodenfreiheit"],
-        # [typ, x, y, z, breite, hoehe, tiefe, kopf]
-        "inhalt": [[i["typ"], i["x"], i["y"], i["z"], i["w"], i["h"], i["d"], i.get("kopf", 0)]
+        "rolle_x": [r["abstand_ende"], d["L"] - r["abstand_ende"]],
+        # [typ, x, y, z, breite, hoehe, tiefe, kopf, kopflänge]
+        "inhalt": [[i["typ"], i["x"], i["y"], i["z"], i["w"], i["h"], i["d"], i.get("kopf", 0), i.get("kopf_l", 0)]
                    for i in platz],
         "abstand": p["inventar"]["abstand"],
+        "abflachung": p["hanteln"]["abflachung"], "griff_d": p["hanteln"]["griff_d"],
     })
     lines = ["// AUTOMATISCH ERZEUGT von tools/build.py aus params.toml – nicht von Hand ändern.", ""]
     lines += [f"{k_} = {scad_value(v)};" for k_, v in werte.items()]
@@ -373,14 +411,16 @@ def gewicht(p, d):
 
 
 def ankippen(p, d):
-    """Winkel und Hubhöhe, bis die verdeckten Rollen am rechten Ende greifen."""
+    """Rollen hinten (Bettseite): Kippwinkel, Hubhöhe an der Vorderkante und Anteil des Gewichts beim Anheben."""
     r, se = p["rollen"], p["korpus"]["sockel_einzug"]
     rad = r["durchmesser"] / 2
     dx, zc = se / 2, rad + r["bodenfreiheit"]
     a = 0.0
     while zc * math.cos(a) - dx * math.sin(a) > rad and a < math.radians(45):
         a += math.radians(0.1)
-    return math.degrees(a), (d["L"] - se) * math.sin(a)
+    hebel = d["D"] - se - 20            # von der hinteren Sockelkante bis zur Griffkante vorne
+    anteil = (d["D"] - se - d["D"] / 2) / hebel
+    return math.degrees(a), hebel * math.sin(a), anteil
 
 
 def fmt(x, n=1):
@@ -414,7 +454,7 @@ def write_stueckliste(p, d, liste, platz, gw):
             "## Polster", "",
             f"- Schaumstoff je Polster {po['schaum']} mm: 30 mm hart (RG 50+) unten, 20 mm mittel (RG 35–40) oben",
             "- Polyesterwatte 200 g/m² über den Schaum, damit die Kanten weich und voll wirken",
-            f"- Bezug: ca. {fmt(leder, 2)} m² Leder (Vollnarben-Rindleder oder hochwertiges Kunstleder), mit Kedernaht an der Oberkante",
+            f"- Bezug: ca. {fmt(leder, 2)} m² Rindleder, vollnarbig, pigmentiert oder Semianilin mit Schutzfinish (kein Anilin- oder Nubukleder: nimmt Schweiß auf), 1,2–1,5 mm, mit Kedernaht an der Oberkante",
             "- Unterseite der Lehnenplatte: Furnier oder Leder, weil sie beim Aufstellen sichtbar ist", "",
             "## Beschläge und Kleinteile", "",
             "| Teil | Menge | Zweck |", "|---|---:|---|",
@@ -426,10 +466,10 @@ def write_stueckliste(p, d, liste, platz, gw):
             "| Schrauben M6 durchgehend + Einschlagmuttern | 12 | Gelenkplatten und Sitz, lösbar |",
             f"| Bodenträger 5 mm | {4 * d['n_fach'] if p['korpus']['fachboden'] else 0} | Fachböden |",
             "| Gleitband für Laufnuten | 2,5 m | leiser Lauf der Schiebetüren |",
-            f"| Rollen Ø {p['rollen']['durchmesser']} mm, gummiert, mit Platte | {2 if p['rollen']['aktiv'] else 0} | verdeckt am rechten Ende |",
+            f"| Rollen Ø {p['rollen']['durchmesser']} mm, gummiert, mit Platte | {2 if p['rollen']['aktiv'] else 0} | verdeckt unter dem hinteren Überstand (Bettseite) |",
             "| Antirutsch-Filzgleiter/Gummipads | 4 | unter dem Sockel |",
             "| Filz oder Leder 3 mm | ca. 0,5 m² | Auflage in den Hantelfächern |",
-            f"| Abstandshalter Eiche | ca. {len([i for i in platz if i['typ'] == 'kh']) * 2} | zwischen den Hanteln, Fingerschutz |",
+            f"| Abstandshalter Eiche | ca. {len([i for i in platz if i['typ'] in ('kh', 'khr')]) * 2} | zwischen den Hanteln, Fingerschutz |",
             "| Hartwachsöl (z. B. farblos oder „weiß“ gegen Nachdunkeln) | 0,75 l | Oberfläche |",
             "| Beize schwarz | 0,25 l | Sockel, Rastleisten, Distanzleisten |", "",
             "## Gewicht und Kosten (Schätzung)", "",
@@ -439,11 +479,13 @@ def write_stueckliste(p, d, liste, platz, gw):
             f"| Eiche massiv, {fmt(gw['flaeche_massiv'], 2)} m² + 25 % Verschnitt à {m['preis_massiv_m2']} €/m² | ca. {fmt(kosten_massiv, 0)} € |",
             f"| Multiplex eichefurniert, {fmt(gw['flaeche_platte'], 2)} m² + 15 % à {m['preis_platte_m2']} €/m² | ca. {fmt(kosten_platte, 0)} € |",
             "| Leder, Schaum, Watte | 250–450 € |",
-            "| Stahlteile gelasert, gekantet, pulverbeschichtet (oder Messing) | 120–250 € |",
+            "| Polsterei (Arbeit, beide Polster) | 250–450 € |",
+            "| Metallbau: Teile gelasert, gekantet, geschweißt, pulverbeschichtet | 200–500 € |",
             "| Beschläge, Rollen, Öl, Beize, Kleinteile | 100–150 € |",
-            f"| **Material gesamt** | **ca. {fmt(holz_k + 470, 0)}–{fmt(holz_k + 850, 0)} €** |",
-            "| optional: Polsterei für beide Polster | 250–450 € |", "",
-            "Ohne Hanteln, Werkzeug und eigene Arbeitszeit. Preise sind grobe Annahmen und regional sehr verschieden.", ""]
+            f"| **Material und Fremdleistungen** | **ca. {fmt(holz_k + 800, 0)}–{fmt(holz_k + 1550, 0)} €** |",
+            "| Schreiner-Arbeitszeit, grob 40–60 h (Richtwert, Angebot einholen) | 2.500–5.000 € |",
+            f"| **Gesamt grob** | **ca. {fmt(holz_k + 3300, 0)}–{fmt(holz_k + 6550, 0)} €** |", "",
+            "Ohne Hanteln (siehe hanteln.md). Preise sind grobe Annahmen und regional sehr verschieden.", ""]
     (ROOT / "docs" / "stueckliste.md").write_text("\n".join(out))
     return inhalt
 
@@ -539,23 +581,83 @@ def write_berechnung(p, d, platz, fehlt, belegt, gw, inhalt, rs, park, F_last, r
             "Beim Training ist das unkritisch. Die aufgestellte Lehne ist aber kein Griff zum Hochziehen, "
             "wenn die Bank leer ist.", ""]
     if p["rollen"]["aktiv"]:
-        a, hub = ankippen(p, d)
-        out += ["## Transport", "",
-                f"- Die Rollen sitzen verdeckt unter dem Korpusüberstand am rechten Ende und greifen ab ≈ {fmt(a)}° Neigung.",
-                f"- Dazu das linke Ende unter dem Überstand fassen und ≈ {fmt(hub, 0)} mm anheben.",
-                f"- Dabei zu heben (halbes Gewicht): leer ≈ {fmt(gw['leer'] / 2, 0)} kg, mit Inventar ≈ {fmt((gw['leer'] + inhalt) / 2, 0)} kg "
-                "→ schwere Hanteln vorher herausnehmen.", ""]
+        a, hub, anteil = ankippen(p, d)
+        out += ["## Transport: vom Bett abrücken", "",
+                f"- Zwei Rollen sitzen verdeckt unter dem hinteren Korpusüberstand (Bettseite), {p['rollen']['abstand_ende']} mm von den Enden.",
+                f"- Vorderkante unter dem Überstand fassen und ≈ {fmt(hub, 0)} mm anheben (≈ {fmt(a)}° Neigung). Dann rollt die Bank nach vorn, vom Bett weg.",
+                f"- Dabei zu heben: leer ≈ {fmt(gw['leer'] * anteil, 0)} kg, mit Inventar ≈ {fmt((gw['leer'] + inhalt) * anteil, 0)} kg. "
+                "Deshalb zuerst die Hanteln herausnehmen, die braucht man fürs Training ohnehin, dann die Bank vorziehen.",
+                "- Zum Training die Bank ca. 60 cm vom Bett abrücken: Beim Drücken und bei Fliegenden gehen die Ellbogen unter Polsterhöhe, "
+                "und beim Sitzen auf der Schrägbank steht ein Fuß neben der Bank.",
+                "- Die Rollen sind für glatte Böden (Parkett, Fliesen). Auf Teppich rollen sie schlecht.", ""]
     (ROOT / "docs" / "berechnung.md").write_text("\n".join(out))
+
+
+def write_hanteln(p, hs, m_griff):
+    h = p["hanteln"]
+    rho = h["dichte_stahl"] * 1e-9
+    roh_kg = sum(2 * math.pi / 4 * (x["D"] + 3) ** 2 * (x["lk"] + h["zugabe"] + 3) * rho for x in hs)
+    ab = h["abflachung"]
+    out = ["# Hanteln", "",
+           "> Automatisch erzeugt aus `params.toml` mit `python3 tools/build.py`. Nicht von Hand ändern.", "",
+           "Fünf Paar Kurzhanteln, passend zur Bank: schwarze Stahlköpfe, Griff aus Eiche. "
+           "Die Maße sind so gewählt, dass jedes Paar genau in sein Fach passt "
+           "(Belegung siehe [berechnung.md](berechnung.md)).", "",
+           "![Hantel](zeichnungen/hantel.svg)", "",
+           "## Aufbau", "",
+           f"- **Köpfe:** Rundstahl S235, gedreht. Fase {h['fase']} × 45° an allen Kanten, zentrisches Sackloch M16 × {h['gewinde_tiefe']} mm"
+           + (f", {ab} mm tiefe Abflachung. Mit ihr rollt die Hantel nicht weg und liegt stabil im Fach." if ab else "."),
+           f"- **Kern:** Gewindestange M16, Festigkeitsklasse 8.8. Sie hält beide Köpfe, die Eichenhülse wird dazwischen geklemmt.",
+           f"- **Griff:** Eiche gedreht, Ø {h['griff_d']} mm, Bohrung 16,5 mm, Länge {h['griff_laenge']} mm. "
+           "Optional mit feinen Längsrillen wie die Lamellen der Bank, das gibt Grip.",
+           "- **Oberfläche:** Köpfe brüniert und gewachst (Patina gewollt) oder matt schwarz pulverbeschichtet. Griff geölt.",
+           f"- **Gewicht Griff + Kern:** {fmt(m_griff * 1000, 0)} g, der Rest steckt in den Köpfen.", "",
+           "## Maße", "",
+           "| Hantel | Kopf Ø | Kopflänge | Hantel gesamt | Kopf je Stück | Gewindestange | Rohteil je Kopf (gesägt) | g je mm Kopflänge |",
+           "|---:|---:|---:|---:|---:|---:|---:|---:|"]
+    for x in hs:
+        R = x["D"] / 2
+        A = math.pi * R * R
+        if ab:
+            A -= R * R * math.acos((R - ab) / R) - (R - ab) * math.sqrt(2 * R * ab - ab * ab)
+        out.append(f"| {fmt(x['kg'])} kg | {x['D']} mm | {fmt(x['lk'])} mm | {fmt(x['laenge'], 0)} mm | "
+                   f"{fmt(x['m_kopf'], 2)} kg | M16 × {x['kern_l']} | Ø {x['D'] + 3} × {fmt(x['lk'] + h['zugabe'] + 3, 0)} mm | "
+                   f"{fmt(A * rho * 1000, 0)} g |")
+    breite = [f"Ø {x['D']}: {fmt(2 * math.sqrt(2 * x['D'] / 2 * ab - ab * ab), 0)} mm" for x in hs] if ab else []
+    out += ["", f"Je Gewicht wird ein Paar gebaut, also 10 Köpfe. Breite der Abflachung: {', '.join(dict.fromkeys(breite))}." if ab else "", "",
+            "## Fertigung", "",
+            f"1. **Rohteile:** Rundstahl S235 beim Stahlhandel auf Länge sägen lassen. Je Kopf Ø + 3 mm und Länge + {h['zugabe'] + 3} mm.",
+            f"2. **Drehen** (Dreherei oder eigene Drehbank): Außen-Ø, Planflächen und Fasen. Zentrisch bohren (Ø 14) und Gewinde M16 × {h['gewinde_tiefe']} schneiden.",
+            f"3. **Abflachung** {ab} mm tief fräsen." if ab else "3. –",
+            f"4. **Auf Gewicht bringen:** Die Köpfe sind {h['zugabe']} mm länger gedreht. Hantel probehalber montieren, wiegen "
+            "und an der Außenseite abplanen, bis das Gewicht stimmt (siehe Spalte g je mm). Toleranz ±1 %.",
+            "5. **Oberfläche:** brünieren und wachsen, oder pulverbeschichten (Gewinde abdecken).",
+            "6. **Griff:** Eiche drehen, eventuell Rillen fräsen, ölen.",
+            "7. **Montage:** Gewindestange mit hochfester Schraubensicherung (z. B. Loctite 270) in den ersten Kopf drehen. "
+            "Griff aufschieben, zweiten Kopf mit Sicherung aufdrehen, bis der Griff fest geklemmt ist. 24 h aushärten lassen.", "",
+            "## Sicherheit", "",
+            "- Die Köpfe dürfen sich nie lösen. Deshalb hochfeste Sicherung und eine Gewindestange der Klasse 8.8, keine Baumarkt-Gewindestange 4.6.",
+            "- Den festen Sitz anfangs vor jedem Training prüfen, später monatlich.",
+            "- Nicht fallen lassen: Stahl auf Parkett hinterlässt Dellen, und der Holzgriff kann reißen.", "",
+            "## Kosten (Schätzung)", "",
+            "| Posten | Kosten |", "|---|---:|",
+            f"| Rundstahl, ca. {fmt(roh_kg, 0)} kg à {h['preis_stahl_kg']} €/kg | ca. {fmt(roh_kg * h['preis_stahl_kg'], 0)} € |",
+            "| Dreherei: 10 Köpfe drehen, bohren, Gewinde, Abflachung | 250–450 € |",
+            "| Brünieren oder Pulverbeschichten | 50–100 € |",
+            "| Gewindestange M16 8.8, Eiche, Schraubensicherung, Öl | 30–50 € |",
+            f"| **Gesamt** | **ca. {fmt(roh_kg * h['preis_stahl_kg'] + 330, 0)}–{fmt(roh_kg * h['preis_stahl_kg'] + 600, 0)} €** |", "",
+            "Mit eigener Drehbank fallen die Dreherei-Kosten weg.", ""]
+    (ROOT / "docs" / "hanteln.md").write_text("\n".join(out))
 
 
 ANSICHTEN = [
     # Datei, Kamera (tx,ty,tz,rx,ry,rz,dist), Projektion, -D Optionen
-    ("moebel.png", "600,200,230,70,0,25,2500", "p", {}),
-    ("moebel_nussbaum.png", "600,200,230,70,0,25,2500", "p", {"farbschema": '"nussbaum"'}),
-    ("schraeg.png", "600,200,450,70,0,25,3400", "p", {"lehne_winkel": "45"}),
-    ("verstellung.png", "640,0,700,90,0,0,3000", "o", {"lehne_winkel": "45", "geist": "true", "zeige_inhalt": "false"}),
-    ("stauraum.png", "600,200,230,70,0,25,2500", "p", {"zeige_tueren": "false"}),
-    ("explosion.png", "600,200,300,66,0,25,3400", "p", {"explosion": "1"}),
+    ("moebel.png", "700,200,230,70,0,25,2850", "p", {}),
+    ("moebel_nussbaum.png", "700,200,230,70,0,25,2850", "p", {"farbschema": '"nussbaum"'}),
+    ("schraeg.png", "700,200,480,70,0,25,3700", "p", {"lehne_winkel": "45"}),
+    ("verstellung.png", "740,0,760,90,0,0,3300", "o", {"lehne_winkel": "45", "geist": "true", "zeige_inhalt": "false"}),
+    ("stauraum.png", "700,200,230,70,0,25,2850", "p", {"zeige_tueren": "false"}),
+    ("explosion.png", "700,200,300,66,0,25,3800", "p", {"explosion": "1"}),
 ]
 
 
@@ -581,14 +683,20 @@ def render():
 def main():
     p = load_params()
     d = derive(p)
+    if "--stuetze-suchen" in sys.argv:
+        suche_stuetze(p, d)
+        return
     rs, park, F_last = rasten(p, d)
     rfehler, rabst = pruefe_rasten(p, d, rs, park)
-    platz, fehlt, belegt = pack(p, d)
+    hs, m_griff = hanteln(p)
+    platz, fehlt, belegt = pack(p, d, hs)
     write_scad(p, d, platz, rs, park)
     gw = gewicht(p, d)
     inhalt = write_stueckliste(p, d, teile(p, d), platz, gw)
     write_berechnung(p, d, platz, fehlt, belegt, gw, inhalt, rs, park, F_last, rfehler, rabst)
-    print("cad/params.scad, docs/stueckliste.md, docs/berechnung.md geschrieben")
+    write_hanteln(p, hs, m_griff)
+    zeichnungen.erzeuge(ROOT / "docs" / "zeichnungen", p, d, rs, park, hs)
+    print("cad/params.scad, docs/stueckliste.md, docs/berechnung.md, docs/hanteln.md, docs/zeichnungen/ geschrieben")
     for w in rfehler:
         print("WARNUNG Schrägbank:", w)
     if fehlt:

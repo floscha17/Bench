@@ -4,7 +4,7 @@
 # Alle Maße in mm, Gewichte in kg, Winkel in Grad.
 
 [bank]
-laenge = 1200   # Länge außen
+laenge = 1400   # Länge außen – Bettende eines 180-cm-Betts (je Seite 20 cm Luft)
 tiefe  = 400    # Tiefe außen
 hoehe  = 450    # Oberkante Polster: Sitzhöhe und Trainingshöhe zugleich
 
@@ -25,14 +25,14 @@ schaum       = 50     # 30 mm hart (RG 50+) + 20 mm mittel (RG 35–40)
 radius       = 12     # Kantenrundung
 einzug       = 15     # Polster rundum gegenüber dem Korpus eingerückt
 schattenfuge = 20     # Luft zwischen Deckel und Polster (Platz für Rastleisten und Stütze)
-sitz_laenge  = 340    # fester Sitz am linken Ende
+sitz_laenge  = 400    # fester Sitz am linken Ende
 fuge         = 25     # zwischen Sitz und Rückenlehne
 
 [schraegbank]
-winkel           = [25, 35, 45, 60, 75, 85]  # Raststellungen; 0° = flach (Parkstellung)
+winkel           = [20, 30, 45, 60, 75, 85]  # Raststellungen; 0° = flach (Parkstellung)
 achse_unter_oberkante = 25   # Drehachse liegt so weit unter der Polsteroberfläche
-stuetze_abstand  = 370       # Gelenk der Stütze an der Lehnenunterseite, ab Drehachse
-stuetze_laenge   = 410       # Gelenk bis Mitte Querstab
+stuetze_abstand  = 430       # Gelenk der Stütze an der Lehnenunterseite, ab Drehachse
+stuetze_laenge   = 490       # Gelenk bis Mitte Querstab
 stuetze_versatz  = 6         # Gelenkpunkt unter der Lehnenplatte
 buegel_d         = 12        # Querstab der Stütze (Stahl rund)
 rast_tiefe       = 8         # Tiefe der Arbeitsrasten
@@ -42,7 +42,7 @@ min_rastabstand  = 30        # Mindestabstand zwischen zwei Rasten (Steg)
 gelenkplatte     = 5         # Stahlplatte, schwarz pulverbeschichtet oder Messing
 bein_breite      = 25        # Stützenbeine Flachstahl: Breite quer zur Bank
 bein_dicke       = 8         # Dicke in der Klappebene (passt flach in die Schattenfuge)
-rippe_breite     = 30        # 2 Eichenrippen unter der Lehnenplatte
+rippe_breite     = 60        # 2 Eichenrippen unter der Lehnenplatte
 rippe_hoehe      = 18
 last_anteil      = 0.7       # Anteil des Körpergewichts auf der Lehne
 last_abstand     = 350       # Lastschwerpunkt auf der Lehne, ab Drehachse
@@ -50,12 +50,12 @@ last_abstand     = 350       # Lastschwerpunkt auf der Lehne, ab Drehachse
 [korpus]
 sockel_hoehe   = 40    # schwarzer, zurückgesetzter Sockel: Korpus „schwebt“
 sockel_einzug  = 40
-mittelwaende   = 1     # 1 = zwei Fächer, passend zu zwei Schiebetüren
+mittelwaende   = 2     # 2 = drei Fächer, passend zu drei Schiebetüren; hält die Deckelspannweite kurz
 fachboden      = true
 fach_unten     = 140   # lichte Höhe der unteren Ebene (schwere Hanteln)
 
 [tueren]
-anzahl          = 2
+anzahl          = 3    # außen vordere Spur, Mitte hintere Spur – jedes Fach einzeln ganz zu öffnen
 ueberlappung    = 40
 lamelle_breite  = 18   # Eiche-Lamellen, Fugen dienen als Lüftung
 lamelle_fuge    = 4
@@ -65,7 +65,8 @@ spur_luft       = 3
 nut_oben        = 10   # Führungsnut im Deckel für die Traversenfeder (Tür zum Einsetzen hochschieben)
 
 [rollen]
-aktiv         = true   # verdeckt unter dem Korpusüberstand am rechten Ende
+aktiv         = true   # verdeckt unter dem hinteren Überstand (Bettseite): vorne anheben, Bank vom Bett wegrollen
+abstand_ende  = 150    # Rollenmitte ab Stirnseite
 durchmesser   = 30
 breite        = 15
 bodenfreiheit = 3      # Rollen greifen erst beim Ankippen
@@ -74,47 +75,30 @@ bodenfreiheit = 3      # Rollen greifen erst beim Ankippen
 nutzer_kg    = 120     # max. Nutzergewicht (wie Technogym)
 dynamik      = 1.5     # Stoßfaktor für Hinsetzen/Übungen
 
-# Stauraum-Inventar. Maße der Hanteln sind SCHÄTZWERTE für Hex-Kurzhanteln –
-# bitte an den echten Hanteln nachmessen und hier eintragen.
-# typ "kh" = Kurzhantel-Paar (breite ergibt sich aus 2 × kopf + abstand),
-# typ "box" = beliebiges Teil als Quader.
+# Selbstgebaute Kurzhanteln: Stahlköpfe (Drehteile) + Eichengriff über Gewindestange.
+# Die Kopflänge wird aus dem Zielgewicht berechnet; je Gewicht wird ein Paar gebaut.
+[hanteln]
+griff_laenge  = 125    # lichte Griffweite zwischen den Köpfen
+griff_d       = 32     # Eichenhülse außen
+kern_d        = 16     # Gewindestange M16, Festigkeitsklasse 8.8
+gewinde_tiefe = 25     # Sackloch-Gewinde je Kopf
+fase          = 3      # Fase 3 × 45° an allen Kopfkanten
+abflachung    = 4      # Abflachung am Kopf: Hantel rollt nicht weg und liegt im Fach stabil (0 = rund)
+zugabe        = 2      # Kopf so viel länger drehen, dann auf Gewicht abstimmen
+dichte_stahl  = 7850
+dichte_griff  = 690
+preis_stahl_kg = 4     # €/kg Rundstahl S235, gesägt (Schätzung)
+satz = [               # [kg je Hantel, Kopfdurchmesser]
+  [2.5, 70],
+  [3.5, 70],
+  [5.0, 80],
+  [7.5, 90],
+  [10.0, 100],
+]
+
+# Weiteres Inventar für den Stauraum (Quader, Schätzwerte).
 [inventar]
 abstand = 15   # Abstandshalter zwischen Hanteln (Fingerschutz, kein Klappern)
-
-[[inhalt]]
-name = "Kurzhanteln 10 kg (Paar)"
-typ = "kh"
-kopf = 125
-laenge = 310
-kg = 20
-
-[[inhalt]]
-name = "Kurzhanteln 7,5 kg (Paar)"
-typ = "kh"
-kopf = 113
-laenge = 285
-kg = 15
-
-[[inhalt]]
-name = "Kurzhanteln 5 kg (Paar)"
-typ = "kh"
-kopf = 100
-laenge = 260
-kg = 10
-
-[[inhalt]]
-name = "Kurzhanteln 3,5 kg (Paar)"
-typ = "kh"
-kopf = 88
-laenge = 245
-kg = 7
-
-[[inhalt]]
-name = "Kurzhanteln 2,5 kg (Paar)"
-typ = "kh"
-kopf = 80
-laenge = 230
-kg = 5
 
 [[inhalt]]
 name = "Trainingsmatte (gefaltet)"
